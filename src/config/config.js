@@ -21,6 +21,38 @@ const config = convict({
       doc: "All nodes/peers in the system including itself",
       format: Array,
       default: ['0.0.0.0:3000','0.0.0.0:3001','0.0.0.0:3002'],
+    },
+  },
+  watcher: {
+    // chokidar options ignoring hidden . files
+    options: {
+      format: '*',
+      default: { 
+        awaitWriteFinish: { 
+          stabilityThreshold: 2000,
+          pollInterval: 100
+        },
+        ignored: /(^|[\/\\])\../
+      },
+    },
+    directories: {
+      doc: "Directories the watcher should watch for files.",
+      format: Array,
+      default: ['/home/rmarquez/temp'],
+    }
+  }
+  postgres: {
+    username: {
+
+    },
+    password: {
+
+    },
+    host: {
+
+    },
+    db_name: {
+      
     }
   }
 });

@@ -7,25 +7,36 @@ const path = require('path')
 const Democracy = require('democracy');
 const chokidar = require('chokidar');
 const config = require('./config/config.js')
+const PgBoss = require('pg-boss');
+const boss = new PgBoss('postgres://postgres:postgres@localhost/o2-queue');
 
 console.log("MY CONFIG: ",config);
-console.log("PEERS: ",config.node.peers);
  
 const app = express()
 app.use(morgan('dev'))
 app.use(bodyParser.json())
 app.use(cors())
 
-
+boss.on('error', onError);
  
-// Basic usage of democracy to manager leader and citizen nodes.
+// Basic usage of democracy to manage leader and citizen nodes.
 var dem = new Democracy({
   source: config.node.address,
-  peers: ['0.0.0.0:3000','0.0.0.0:3001','0.0.0.0:3002'],
+  peers: config.node.peers,
 });
  
 dem.on('added', (data) => {
   console.log('Added peer to rotation: ', data);
+  if(!dem.isLeader()){
+    console.log("i am not the leader so i'll subscribe to the ingest queue");
+    boss.start()
+    .then(boss => {
+      boss.subscribe('ingest', ingestHandler)
+      .then(() => console.log('subscribed to ingest queue'))
+      .catch(onError);
+    });
+
+  }
 });
  
 dem.on('removed', (data) => {
@@ -33,49 +44,49 @@ dem.on('removed', (data) => {
 });
  
 dem.on('elected', (data) => {
+  // Express stuff
   console.log('You have been elected leader! UI running on 8080');
-  //console.log("DEM: ",dem);
   app.listen(8080)
   app.get('/',function(req,res){
-    console.log("health ui coming soon...")
-   //dem.send('ciao',{hello: 'blahblahblah'});
+    res.send('Health/Ingest UI coming soon...')
   })
 
-  // One-liner for current directory, ignores .dotfiles
-  var watch_options = {
-    awaitWriteFinish: {
-      stabilityThreshold: 2000,
-      pollInterval: 100
-    },
-    ignored: /(^|[\/\\])\../
-  }
-	var watcher = chokidar.watch('/home/rmarquez/temp', watch_options)
-  watcher.on('addDir', (event,path) => {
-    console.log("Watching directory for files: ",path);
+  //Db queue
+  boss.disconnect()
+  .then(() => console.log("Disconnected"))
+  .catch(onError); //disconnect just incase i use to be a node designated to ingesting jobs
+  boss.start()
+  .then(ready)
+  .catch(onError);
+
+});
+ 
+function ready() {
+  console.log("INGEST o2-queue ready so we start the watcher...");
+  var watcher = chokidar.watch(config.watcher.directories, config.watcher.options)
+  watcher.on('addDir', (path,stats) => {
+    console.log("Watching directory for files: ",path); 
   })
 
-  watcher.on('add', (event, path) => {
-  		console.log(event, path);
-      // TODO: get worker node stats to see where to send added file
-      // TODO: publish or send message
+  watcher.on('add', (path, stats) => {
+    console.log("added : ",path);
+    boss.publish('ingest', {param1: 'parameter1'})
+    .then(jobId => console.log(`created ingest-job ${jobId}`))
+    .catch(onError);
 
   });
-
-});
+}
  
-// Support for custom events.
-dem.on('ciao', (data) => {
-  console.log(data.hello); // Logs 'world'
-});
+function ingestHandler(job) {
+  console.log(`received ${job.name} ${job.id}`);
+  console.log(`data: ${JSON.stringify(job.data)}`);
  
-dem.send('ciao', {hello: 'world'});
+  job.done()
+    .then(() => console.log(`some-job ${job.id} completed`))
+    .catch(onError);
+}
  
-// Support for basic pub/sub.
-dem.on('my-channel', (data) => {
-  console.log(data.hello); // Logs 'world'
-});
- 
-dem.subscribe('my-channel');
-dem.publish('my-channel', {hello: 'world'});
-
+function onError(error) {
+  console.error(error);
+}
 
