@@ -1,2 +1,2 @@
 # omar-data-manager
-An OMAR app of connected mast/slaves to watch the file system and ingest imagery
+An OMAR app of connected master/slaves to watch the file system and ingest imagery
