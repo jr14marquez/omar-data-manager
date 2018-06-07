@@ -2,18 +2,16 @@ const express = require('express')
 const fs = require('fs')
 const bodyParser = require('body-parser')
 const cors = require('cors')
-const morgan = require('morgan')
 const path = require('path')
 const Democracy = require('democracy');
 const chokidar = require('chokidar');
 const config = require('./config/config.js')
 const PgBoss = require('pg-boss');
-const boss = new PgBoss('postgres://postgres:postgres@localhost/o2-queue');
+const boss = new PgBoss(`postgres://${config.postgres.username}:${config.postgres.password}@${config.postgres.host}/${config.postgres.db_name}`);
 
-console.log("MY CONFIG: ",config);
+//console.log("MY CONFIG: ",config);
  
 const app = express()
-app.use(morgan('dev'))
 app.use(bodyParser.json())
 app.use(cors())
 
@@ -28,12 +26,12 @@ var dem = new Democracy({
 dem.on('added', (data) => {
   console.log('Added peer to rotation: ', data);
   if(!dem.isLeader()){
-    console.log("i am not the leader so i'll subscribe to the ingest queue");
-    boss.start()
-    .then(boss => {
-      boss.subscribe('ingest', ingestHandler)
-      .then(() => console.log('subscribed to ingest queue'))
-      .catch(onError);
+    console.log("i am not the leader so i'll connect and subscribe to the ingest queue");
+    boss.connect()
+      .then(boss => {
+        boss.subscribe('ingest', ingestHandler)
+          .then(() => console.log('subscribed to ingest queue'))
+          .catch(onError);
     });
 
   }
@@ -52,16 +50,19 @@ dem.on('elected', (data) => {
   })
 
   //Db queue
+  // Disconnect just incase a node use to be a citizen/worker node
   boss.disconnect()
-  .then(() => console.log("Disconnected"))
-  .catch(onError); //disconnect just incase i use to be a node designated to ingesting jobs
+    .then(() => console.log("Disconnected"))
+    .catch(onError); 
   boss.start()
-  .then(ready)
-  .catch(onError);
+    .then(ready)
+    .catch(onError);
 
 });
  
 function ready() {
+
+
   console.log("INGEST o2-queue ready so we start the watcher...");
   var watcher = chokidar.watch(config.watcher.directories, config.watcher.options)
   watcher.on('addDir', (path,stats) => {
@@ -71,10 +72,18 @@ function ready() {
   watcher.on('add', (path, stats) => {
     console.log("added : ",path);
     boss.publish('ingest', {param1: 'parameter1'})
-    .then(jobId => console.log(`created ingest-job ${jobId}`))
-    .catch(onError);
+      .then(jobId => console.log(`created ingest-job ${jobId}`))
+      .catch(onError);
 
   });
+
+  // Subscribe to ingest queue and do work if leader is also a citizen
+  if(config.node.citizen){
+    boss.subscribe('ingest', ingestHandler)
+      .then(() => console.log('leader subscribed to ingest queue'))
+      .catch(onError);
+  }
+  
 }
  
 function ingestHandler(job) {
