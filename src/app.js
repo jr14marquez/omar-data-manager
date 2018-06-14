@@ -7,9 +7,9 @@ const Democracy = require('democracy');
 const chokidar = require('chokidar');
 const config = require('./config/config.js')
 const PgBoss = require('pg-boss');
-const boss = new PgBoss(`postgres://${config.postgres.username}:${config.postgres.password}@${config.postgres.host}/${config.postgres.db_name}`);
+const jm = require('./lib/JobManager.js')
 
-//console.log("MY CONFIG: ",config);
+const boss = new PgBoss(`postgres://${config.postgres.username}:${config.postgres.password}@${config.postgres.host}/${config.postgres.db_name}`);
  
 const app = express()
 app.use(bodyParser.json())
@@ -29,9 +29,13 @@ dem.on('added', (data) => {
     console.log("i am not the leader so i'll connect and subscribe to the ingest queue");
     boss.connect()
       .then(boss => {
-        boss.subscribe('ingest', ingestHandler)
+        /*boss.subscribe('ingest', ingestHandler)
+          .then(() => console.log('subscribed to ingest queue'))
+          .catch(onError);*/
+        boss.subscribe('ingest', {batchSize: 5 }, job => jm.ingest(job))
           .then(() => console.log('subscribed to ingest queue'))
           .catch(onError);
+
     });
 
   }
@@ -44,6 +48,7 @@ dem.on('removed', (data) => {
 dem.on('elected', (data) => {
   // Express stuff
   console.log('You have been elected leader! UI running on 8080');
+  console.log("DATA: ",data)
   app.listen(8080)
   app.get('/',function(req,res){
     res.send('Health/Ingest UI coming soon...')
@@ -70,30 +75,44 @@ function ready() {
   })
 
   watcher.on('add', (path, stats) => {
-    console.log("added : ",path);
-    boss.publish('ingest', {param1: 'parameter1'})
-      .then(jobId => console.log(`created ingest-job ${jobId}`))
+    console.log("watcher found : ",path);
+    // set key : {singletonKey: '123'}
+    boss.publishOnce('ingest', {file: path, stats: stats})
+      .then(jobId => console.log(`created ingest-job ${jobId} for file: ${path}`))
       .catch(onError);
 
   });
 
   // Subscribe to ingest queue and do work if leader is also a citizen
   if(config.node.citizen){
-    boss.subscribe('ingest', ingestHandler)
+    /*boss.subscribe('ingest', ingestHandler)
+      .then(() => console.log('leader subscribed to ingest queue'))
+      .catch(onError);*/
+    boss.subscribe('ingest', {batchSize: 5 }, job => jm.ingest(job))
       .then(() => console.log('leader subscribed to ingest queue'))
       .catch(onError);
   }
   
 }
  
-function ingestHandler(job) {
-  console.log(`received ${job.name} ${job.id}`);
+/*function ingestHandler(jobs) {
+  console.log("IN INGEST HANDLER with jobs: ",jobs)
+  //console.log(`received ${job.name} ${job.id}`);
   console.log(`data: ${JSON.stringify(job.data)}`);
  
   job.done()
     .then(() => console.log(`some-job ${job.id} completed`))
     .catch(onError);
-}
+
+    jobs.map((job) => {
+      console.log("JOB DATA in HANDLER: ",job.data)
+      let image_file = job.data.file.split("/").pop()
+      
+      job.done()
+        .then(() => console.log(`ingest-job ${job.id} completed`))
+        .catch(onError)
+    })
+}*/
  
 function onError(error) {
   console.error(error);

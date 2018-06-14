@@ -10,6 +10,12 @@ const config = convict({
     arg: 'nodeEnv',
     env: 'NODE_ENV'
   },
+  archive_dir: {
+    doc: 'The path to the archive directory where data should be written to.',
+    format: String,
+    default: '/home/rmarquez/archive',
+    env: 'ARCHIVE_DIR'
+  },
   node: {
     /* By Default the first node started will be the leader node and each
      * node after will be a citizen. A vote will take place and a new 
@@ -26,12 +32,14 @@ const config = convict({
     },
     citizen: {
       format: 'Boolean',
-      default: false
+      default: false,
+      env: 'CITIZEN',
     },
     peers: {
       doc: 'All nodes/peers in the system including itself',
       format: Array,
       default: ['0.0.0.0:3000','0.0.0.0:3001','0.0.0.0:3002'],
+      env: 'PEERS',
     },
   },
   watcher: {
@@ -51,26 +59,31 @@ const config = convict({
       doc: 'Directories the watcher should watch for files.',
       format: Array,
       default: ['/home/rmarquez/temp'],
+      env: 'DIRECTORIES'
     }
   },
   // Must be postgres so that we can use the pg-boss queue module
   postgres: {
     username: {
       format: String,
-      default: 'postgres',
+      default: 'rmarquez',
+      env: 'PG_USERNAME'
     },
     password: {
       format: String,
-      default: 'postgres',
+      default: '',
       sensitive: true,
+      env: 'PG_PASSWORD'
     },
     host: {
       format: '*',
       default: 'localhost',
+      env: 'PG_HOST'
     },
     db_name: {
       format: String,
       default: 'o2-queue',
+      env: 'DB_NAME'
     }
   }
 });
