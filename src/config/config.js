@@ -56,9 +56,9 @@ const config = convict({
       },
     },
     directories: {
-      doc: 'Directories the watcher should watch for files.',
+      doc: 'Directories the watcher should watch for files plus extensions on files.',
       format: Array,
-      default: ['/home/rmarquez/temp'],
+      default: ['/home/rmarquez/temp/*.txt','/home/rmarquez/temp/*.tar'],
       env: 'DIRECTORIES'
     }
   },
