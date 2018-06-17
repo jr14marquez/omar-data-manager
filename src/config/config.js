@@ -41,6 +41,13 @@ const config = convict({
       default: ['0.0.0.0:3000','0.0.0.0:3001','0.0.0.0:3002'],
       env: 'PEERS',
     },
+    ui: {
+      doc: 'The port the Health/Status UI should listen/bind on',
+      format: "port",
+      default: 8080,
+      arg: "ui",
+      env: "UI"
+    }
   },
   watcher: {
     // chokidar options ignoring hidden . files
@@ -57,8 +64,16 @@ const config = convict({
     },
     directories: {
       doc: 'Directories the watcher should watch for files plus extensions on files.',
-      format: Array,
-      default: ['/home/rmarquez/temp/*.txt','/home/rmarquez/temp/*.tar'],
+      format: '*',
+      default: { '/Users/JR/dropbox1': {priority: 10, extensions: ['*.txt','*.tar'] }},
+      /*
+      default: [ 
+        { 
+          path:'/Users/JR/dropbox1',
+          priority: '10',
+          extensions: ['*.txt','*.tar']
+        },
+      ],*/
       env: 'DIRECTORIES'
     }
   },
@@ -66,7 +81,7 @@ const config = convict({
   postgres: {
     username: {
       format: String,
-      default: 'rmarquez',
+      default: 'postgres',
       env: 'PG_USERNAME'
     },
     password: {
