@@ -79,10 +79,7 @@ dem.on('added', (data) => {
 // Each citizen will report status on jobs here
 // which will then be sent to the ui via socketio
 dem.on('status', (data) => {
-  console.log(data)
-  console.log("AWAITING BEFORE: ",awaiting)
   delete awaiting[data.completed_id]
-  console.log("AWAITING NOW: ",awaiting)
 
 });
 
@@ -102,8 +99,8 @@ dem.on('elected', (data) => {
  
 function ready() {
 
-  console.log("INGEST o2-queue ready so we start the watcher...");
-  const query = "SELECT id, priority, data->'file' AS file, data->'stats' AS Stats FROM job WHERE state = 'created'";
+  console.log("Grabbing jobs that are already in the queue and bringing them in local for tracking/reporting.")
+  const query = "SELECT id, priority, data->'file' AS file, data->'stats' AS Stats FROM job WHERE state = 'created' AND name = 'ingest'";
   boss.db.executeSql(query)
  .then((data) => {
     data.rows.map(res => {
@@ -118,6 +115,7 @@ function ready() {
     })    
   })
 
+  console.log("INGEST o2-queue ready so we start the watcher...");
   let watch_dirs = []
   let directories = Object.keys(config.watcher.directories)
   directories.map(dir => {
@@ -146,6 +144,9 @@ function ready() {
           priority: priority
         } 
         awaiting[jobId] = job_data
+
+        // Update UI with new awaiting download list 
+        //io.emit('some event', { for: 'everyone' });
       })
       .catch(onError);
    });
