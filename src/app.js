@@ -1,13 +1,25 @@
-const express = require('express')
-const fs = require('fs')
+const express = require('express')();
 const bodyParser = require('body-parser')
 const cors = require('cors')
+express.use(bodyParser.json())
+express.use(cors())
+
+var app = require('express')();
+app.use(bodyParser.json())
+app.use(cors())
+var server = require('http').Server(app);
+var io = require('socket.io')(server);
+
+const fs = require('fs')
+const filesize = require('filesize')
 const path = require('path')
 const Democracy = require('democracy');
 const chokidar = require('chokidar');
 const config = require('./config/config.js')
 const PgBoss = require('pg-boss');
 const jm = require('./lib/JobManager.js')
+const awaiting = {}
+
 
 const options = {
   host: config.postgres.host,
@@ -31,15 +43,15 @@ catch(error){
   console.error(error)
 }
 
-const app = express()
-app.use(bodyParser.json())
-app.use(cors())
 
-console.log("UI: ",config.node.ui)
-app.listen(config.node.ui)
+server.listen(config.node.ui)
 app.get('/',function(req,res){
   res.send('Health/Ingest UI coming soon...')
 })
+
+io.on('connection', function(socket){
+  console.log('a user connected');
+});
 
 boss.on('error', onError);
 boss.on('monitor-states', onMonitor);
@@ -56,7 +68,7 @@ dem.on('added', (data) => {
     console.log("i am not the leader so i'll connect and subscribe to the ingest queue");
     boss.connect()
       .then(boss => {
-        boss.subscribe('ingest', {batchSize: 5 }, job => jm.ingest(job))
+        boss.subscribe('ingest', {batchSize: 5 }, job => jm.ingest(job,dem))
           .then(() => console.log('subscribed to ingest queue'))
           .catch(onError);
 
@@ -64,13 +76,24 @@ dem.on('added', (data) => {
 
   }
 });
+
+// Each citizen will report status on jobs here
+// which will then be sent to the ui via socketio
+dem.on('status', (data) => {
+  console.log(data)
+  console.log("AWAITING BEFORE: ",awaiting)
+  delete awaiting[data.completed_id]
+  console.log("AWAITING NOW: ",awaiting)
+
+});
+
+dem.subscribe('status');
  
 dem.on('removed', (data) => {
   console.log('Removed peer from rotation: ', data);
 });
  
 dem.on('elected', (data) => {
-  // Express stuff
   console.log('You have been elected leader!');
   boss.start()
     .then(ready)
@@ -101,6 +124,14 @@ function ready() {
     boss.publishOnce('ingest', {file: file, stats: stats},{priority: priority},file)
       .then(jobId => {
         console.log(`created ingest-job ${jobId} for file: ${file}`)
+        const file_name = path.basename(file);
+        //Add to boss's awaiting report
+        const job_data = {
+          filename: file_name,
+          size: filesize(stats.size),
+          created: stats.ctime,
+        } 
+        awaiting[jobId] = job_data
       })
       .catch(onError);
    });

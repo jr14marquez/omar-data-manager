@@ -2,35 +2,35 @@ const fs = require('fs-extra')
 const config = require('../config/config.js')
 
  
-exports.ingest = (jobs) => {
+exports.ingest = (jobs,dem) => {
 	console.log("JOBS IN INGEST: ",jobs)
+	//REPORT back number of ingest jobs received.
+	dem.publish('status', {received: jobs.length})
+ 
 	jobs.map((job) => {
       mvFile(job.data.file)
       .then(() => {
+      	//Run omar-data-manager cmdl app to ingest imagery
       	job.done()
-        .then(() => console.log(`ingest-job ${job.id} completed`))
+        .then(() => {
+        	console.log("JOB here: ",job)
+        	console.log(`ingest-job ${job.id} completed`)
+        	dem.publish('status', {completed_id: job.id});
+        })
         .catch(onError)
       })     
     })
 }
 
-function wait(arg){
-	console.log("ARG here: ",arg)
-}
-
 var mvFile = (image_file) => {
-	//console.log("IMAGE FILE: ",image_file)
-	//console.log("ARCHIVE_DIR: ",config.archive_dir)
 	let file_name = image_file.split("/").pop()
 	var drop_dir = getFilePath(file_name, config.archive_dir)
-	//console.log("DROP DIR: ",drop_dir)
 	return fs.ensureDir(drop_dir)
 		.then(() => {
 			let dest = `${drop_dir}/${file_name}`
 			return fs.move(image_file,dest)
 				.then(() => {
 				  return `successfully moved file to archive ${drop_dir}`
-	
 				})
 				.catch(err => {
 				  console.error(err)
@@ -52,7 +52,6 @@ var getFilePath = (file_name, archive_dir) => {
 	let filePath = `${archive_dir}/${mission}/${year}/${month}/${day}/${imageId}`
 
 	return filePath
- 	
 }
 
 var getMonth = (month) => {

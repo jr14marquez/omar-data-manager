@@ -65,7 +65,7 @@ const config = convict({
     directories: {
       doc: 'Directories the watcher should watch for files plus extensions on files.',
       format: '*',
-      default: { '/Users/JR/dropbox1': {priority: 10, extensions: ['*.txt','*.tar'] }},
+      default: { '/home/rmarquez/temp': {priority: 10, extensions: ['*.txt','*.tar'] }},
       /*
       default: [ 
         { 
