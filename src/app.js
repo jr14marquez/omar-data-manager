@@ -19,7 +19,7 @@ const config = require('./config/config.js')
 const PgBoss = require('pg-boss');
 const jm = require('./lib/JobManager.js')
 const awaiting = {}
-
+var pg = require('pg')
 
 const options = {
   host: config.postgres.host,
@@ -30,7 +30,7 @@ const options = {
   expireCheckIntervalMinutes: 2,
   archiveCompletedJobsEvery: '1 hour',
   archiveCheckIntervalMinutes: 20,
-  deleteArchivedJobsEvery: '7 days',
+  deleteArchivedJobsEvery: '6 days',
   deleteCheckInterval: '',
   monitorStateIntervalSeconds: 1,
 }
@@ -42,7 +42,6 @@ try {
 catch(error){
   console.error(error)
 }
-
 
 server.listen(config.node.ui)
 app.get('/',function(req,res){
@@ -104,6 +103,20 @@ dem.on('elected', (data) => {
 function ready() {
 
   console.log("INGEST o2-queue ready so we start the watcher...");
+  const query = "SELECT id, priority, data->'file' AS file, data->'stats' AS Stats FROM job WHERE state = 'created'";
+  boss.db.executeSql(query)
+ .then((data) => {
+    data.rows.map(res => {
+      const file_name = path.basename(res.file)
+      const job_data = {
+        filename: file_name,
+        size: filesize(res.stats.size),
+        created: res.stats.ctime,
+        priority: res.priority
+      } 
+      awaiting[res.id] = job_data
+    })    
+  })
 
   let watch_dirs = []
   let directories = Object.keys(config.watcher.directories)
@@ -130,6 +143,7 @@ function ready() {
           filename: file_name,
           size: filesize(stats.size),
           created: stats.ctime,
+          priority: priority
         } 
         awaiting[jobId] = job_data
       })
