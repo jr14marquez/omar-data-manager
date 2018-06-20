@@ -50,6 +50,9 @@ app.get('/',function(req,res){
 
 io.on('connection', function(socket){
   console.log('a user connected');
+  setInterval(() => {
+    io.emit('BACKQUEUE', awaiting);
+  },1000)
 });
 
 boss.on('error', onError);
@@ -96,6 +99,13 @@ dem.on('elected', (data) => {
     .catch(onError);
 
 });
+function test(){
+  console.log("START SOCKETIO testing")
+  setInterval(() => {
+    io.emit('BACKQUEUE', { data: 'backqueue test' });
+  },1000)
+  
+}
  
 function ready() {
 
@@ -146,7 +156,7 @@ function ready() {
         awaiting[jobId] = job_data
 
         // Update UI with new awaiting download list 
-        //io.emit('some event', { for: 'everyone' });
+        //io.emit('BACKQUEUE', { data: awaiting });
       })
       .catch(onError);
    });
