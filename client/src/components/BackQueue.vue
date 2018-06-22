@@ -1,7 +1,5 @@
 <template>
-  <b-container class="table">
    <b-table striped :items="backQueue"></b-table>
-  </b-container>
 </template>
 
 <script>
