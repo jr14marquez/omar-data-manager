@@ -138,14 +138,19 @@ function ready() {
   console.log("WATCH DIRS: ",watch_dirs)
   var watcher = chokidar.watch(watch_dirs, config.watcher.options)
   watcher.on('add', (file, stats) => {
+    console.log("STATS: ",stats)
     let base_path = path.dirname(file)
+    let file_type = path.extname(file)
+    const file_name = path.basename(file)
+
+    // Get priority from config using the directory as key
     let priority = config.watcher.directories[base_path].priority
     console.log(`watcher found : ${file} with priority ${priority}`);
     // queue, {data}, {priority}, singletonKey
     boss.publishOnce('ingest', {file: file, stats: stats},{priority: priority},file)
       .then(jobId => {
         console.log(`created ingest-job ${jobId} for file: ${file}`)
-        const file_name = path.basename(file);
+        
         //Add to boss's awaiting report
         const job_data = {
           filename: file_name,
