@@ -19,21 +19,9 @@ const config = require('./config/config.js')
 const PgBoss = require('pg-boss');
 const jm = require('./lib/JobManager.js')
 const awaiting = {}
-var pg = require('pg')
+const fUtil = require('./lib/FileUtil.js')
 
-const options = {
-  host: config.postgres.host,
-  database: config.postgres.db_name,
-  user: config.postgres.username,
-  password: config.postgres.password,
-  schema: 'public',
-  expireCheckIntervalMinutes: 2,
-  archiveCompletedJobsEvery: '1 hour',
-  archiveCheckIntervalMinutes: 20,
-  deleteArchivedJobsEvery: '6 days',
-  deleteCheckInterval: '',
-  monitorStateIntervalSeconds: 1,
-}
+const options = Object.assign(config.postgres,config.jobQueue)
 
 let boss;
 try {
@@ -43,6 +31,7 @@ catch(error){
   console.error(error)
 }
 
+console.log("UI LISTENING ON: ",config.node.ui)
 server.listen(config.node.ui)
 app.get('/',function(req,res){
   res.send('Health/Ingest UI coming soon...')
@@ -50,15 +39,17 @@ app.get('/',function(req,res){
 
 io.on('connection', function(socket){
   console.log('a user connected');
-  setInterval(() => {
+  //setInterval(() => {
+    console.log('Emitting backqueue to connected clients')
     io.emit('BACKQUEUE', awaiting);
-  },1000)
+  //},10000)
 });
 
 boss.on('error', onError);
 boss.on('monitor-states', onMonitor);
  
 // Basic usage of democracy to manage leader and citizen nodes.
+console.log("CITIZEN NODE STARTED ON: ",config.node.address)
 var dem = new Democracy({
   source: config.node.address,
   peers: config.node.peers,
@@ -83,6 +74,7 @@ dem.on('added', (data) => {
 // which will then be sent to the ui via socketio
 dem.on('status', (data) => {
   delete awaiting[data.completed_id]
+  io.emit('BACKQUEUE', awaiting);
 
 });
 
@@ -119,9 +111,14 @@ function ready() {
         filename: file_name,
         size: filesize(res.stats.size),
         created: res.stats.ctime,
-        priority: res.priority
+        priority: res.priority,
+        file_type: res.stats.file_type,
+        mission: res.stats.mission,
       } 
+      console.log("JOB DATA: ",job_data)
       awaiting[res.id] = job_data
+      io.emit('BACKQUEUE', awaiting);
+
     })    
   })
 
@@ -138,10 +135,13 @@ function ready() {
   console.log("WATCH DIRS: ",watch_dirs)
   var watcher = chokidar.watch(watch_dirs, config.watcher.options)
   watcher.on('add', (file, stats) => {
-    console.log("STATS: ",stats)
+    console.log("FILE FROM WATCH: ",file)
     let base_path = path.dirname(file)
-    let file_type = path.extname(file)
     const file_name = path.basename(file)
+    /*let file_type = path.extname(file)
+    const mission = fUtil.getMission(file_name)*/
+    stats.file_type = path.extname(file)
+    stats.mission = fUtil.getMission(file_name)
 
     // Get priority from config using the directory as key
     let priority = config.watcher.directories[base_path].priority
@@ -156,12 +156,13 @@ function ready() {
           filename: file_name,
           size: filesize(stats.size),
           created: stats.ctime,
-          priority: priority
+          priority: priority,
+          file_type: stats.file_type,
+          mission: stats.mission,
         } 
-        awaiting[jobId] = job_data
-
         // Update UI with new awaiting download list 
-        //io.emit('BACKQUEUE', { data: awaiting });
+        awaiting[jobId] = job_data
+        io.emit('BACKQUEUE', awaiting);
       })
       .catch(onError);
    });

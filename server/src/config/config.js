@@ -13,7 +13,8 @@ const config = convict({
   archive_dir: {
     doc: 'The path to the archive directory where data should be written to.',
     format: String,
-    default: '/home/rmarquez/archive',
+    //default: '/home/rmarquez/archive',
+    default: '/Users/JR/archive',
     env: 'ARCHIVE_DIR'
   },
   node: {
@@ -65,21 +66,24 @@ const config = convict({
     directories: {
       doc: 'Directories the watcher should watch for files plus extensions on files.',
       format: '*',
-      default: { '/home/rmarquez/temp': {priority: 10, extensions: ['*.txt','*.tar'] }},
-      /*
-      default: [ 
-        { 
-          path:'/Users/JR/dropbox1',
-          priority: '10',
-          extensions: ['*.txt','*.tar']
-        },
-      ],*/
+      //default: { '/home/rmarquez/temp': {priority: 10, extensions: ['*.txt','*.tar'] }},
+      default: { '/Users/JR/dropbox1': {priority: 10, extensions: ['*.txt','*.tar'] }},
       env: 'DIRECTORIES'
     }
   },
   // Must be postgres so that we can use the pg-boss queue module
   postgres: {
-    username: {
+    host: {
+      format: '*',
+      default: 'localhost',
+      env: 'PG_HOST'
+    },
+    database: {
+      format: String,
+      default: 'o2-queue',
+      env: 'DB_NAME'
+    },
+    user: {
       format: String,
       default: 'postgres',
       env: 'PG_USERNAME'
@@ -89,18 +93,36 @@ const config = convict({
       default: '',
       sensitive: true,
       env: 'PG_PASSWORD'
-    },
-    host: {
-      format: '*',
-      default: 'localhost',
-      env: 'PG_HOST'
-    },
-    db_name: {
+    }, 
+    schema: {
       format: String,
-      default: 'o2-queue',
-      env: 'DB_NAME'
+      default: 'public',
+      env: 'SCHEMA'
     }
-  }
+  },
+  // JobQueue Options
+  jobQueue: {
+    expireCheckIntervalMinutes: {
+      format: 'int',
+      default: 2,
+      env: 'EXPIRE_CHECK_INTERVAL_MINUTES'
+    },
+    archiveCompletedJobsEvery: {
+      format: String,
+      default: '1 hour',
+      env: 'ARCHIVE_COMPLETED_JOBS_EVERY'
+    },
+    archiveCheckIntervalMinutes: {
+      format: 'int',
+      default: 20,
+      env: 'ARCHIVE_CHECK_INTERVAL_MINUTES'
+    },
+    deleteArchivedJobsEvery: {
+      format: String,
+      default: '6 days',
+      env: 'DELETE_ARCHIVED_JOBS_EVERY'
+    },
+  },
 });
 
 const env = config.get('env');

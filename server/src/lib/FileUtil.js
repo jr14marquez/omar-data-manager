@@ -1,13 +1,12 @@
 const fs = require('fs-extra')
-const config = require('../config/config.js')
 
-var mvFile = (image_file) => {
-	let file_name = image_file.split("/").pop()
-	var drop_dir = getFilePath(file_name, config.archive_dir)
-	return fs.ensureDir(drop_dir)
+var mvFile = (file,archive_dir) => {
+	let file_name = file.split("/").pop()
+	var dest_dir = getFilePath(file_name, archive_dir)
+	return fs.ensureDir(dest_dir)
 		.then(() => {
-			let dest = `${drop_dir}/${file_name}`
-			return fs.move(image_file,dest)
+			let dest = `${dest_dir}/${file_name}`
+			return fs.move(file,dest)
 				.then(() => {
 				  return `successfully moved file to archive ${drop_dir}`
 				})
@@ -62,6 +61,7 @@ var getDay = (file_name) => { return file_name.substring(0,2) }
 var getImageId = (file_name) => { return file_name.substring(0,18) }
 
 module.exports = {
+	mvFile: mvFile,
     getFilePath: getFilePath,
     getMission: getMission,
     getYear: getYear,
