@@ -1,15 +1,18 @@
 <template>
   <div>
-    <b-table bg-primary small responsive head-variant="dark" striped :items="backQueue">
-   </b-table>
-   <b-pagination align="center" size="md" :total-rows="jobLength" v-model="currentPage" :per-page="8">
-   </b-pagination>
+   <stat-table :tsize="'small'" :tdata="backQueue" :tfields="fields"></stat-table>
+   <b-pagination align="center" size="md" :total-rows="jobLength" v-model="currentPage" :per-page="8"></b-pagination>
  </div>
 </template>
 
 <script>
+import StatTable from './Table.vue'
+
 export default {
   name: 'BackQueue',
+  components: {
+    StatTable
+  },
   data () {
     return {
       message: '',
@@ -17,6 +20,7 @@ export default {
       currentPage: 1,
       jobsPerPage: 8,
       jobLength: 8,
+      fields: ['filename', 'size', 'created', 'priority', 'file_type', 'mission'],
       items: [{ file_name: '', size: '', created: '', priority: '', file_type: '', mission: '' }],
       testData: [
         { file_name: '02MAR1722111234.txt', size: '1GB', created: 'Today', priority: '10' },
