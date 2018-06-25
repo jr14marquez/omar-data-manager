@@ -13,8 +13,8 @@ const config = convict({
   archive_dir: {
     doc: 'The path to the archive directory where data should be written to.',
     format: String,
-    //default: '/home/rmarquez/archive',
-    default: '/Users/JR/archive',
+    default: '/home/rmarquez/archive',
+    //default: '/Users/JR/archive',
     env: 'ARCHIVE_DIR'
   },
   node: {
@@ -66,8 +66,8 @@ const config = convict({
     directories: {
       doc: 'Directories the watcher should watch for files plus extensions on files.',
       format: '*',
-      //default: { '/home/rmarquez/temp': {priority: 10, extensions: ['*.txt','*.tar'] }},
-      default: { '/Users/JR/dropbox1': {priority: 10, extensions: ['*.txt','*.tar'] }},
+      default: { '/home/rmarquez/temp': {priority: 10, extensions: ['*.txt','*.NITF'] }},
+      //default: { '/Users/JR/dropbox1': {priority: 10, extensions: ['*.txt','*.tar'] }},
       env: 'DIRECTORIES'
     }
   },

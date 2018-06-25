@@ -4,10 +4,11 @@ const config = require('../config/config.js')
 
  
 exports.ingest = (jobs,dem) => {
-	console.log("JOBS IN INGEST FOR THIS NODE: ",jobs)
-	//REPORT back number of ingest jobs received.
-	dem.publish('status', {received: jobs.length})
- 
+  let job_ids = []
+  jobs.map((job) => { job_ids.push(job.id) })
+  //REPORT back number of ingest jobs received.
+  dem.publish('received', { host: dem.options.id, received: job_ids})
+	
 	jobs.map((job) => {
       //mvFile(job.data.file)
       fUtil.mvFile(job.data.file,config.archive_dir)
@@ -16,7 +17,7 @@ exports.ingest = (jobs,dem) => {
       	job.done()
         .then(() => {
         	console.log(`ingest-job ${job.id} completed`)
-        	dem.publish('status', {completed_id: job.id});
+        	dem.publish('completed', {completed_id: job.id});
         })
         .catch(onError)
       })     

@@ -8,7 +8,7 @@ var mvFile = (file,archive_dir) => {
 			let dest = `${dest_dir}/${file_name}`
 			return fs.move(file,dest)
 				.then(() => {
-				  return `successfully moved file to archive ${drop_dir}`
+				  return `successfully moved file to archive ${dest}`
 				})
 				.catch(err => {
 				  console.error(err)

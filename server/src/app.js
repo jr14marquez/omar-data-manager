@@ -53,6 +53,7 @@ console.log("CITIZEN NODE STARTED ON: ",config.node.address)
 var dem = new Democracy({
   source: config.node.address,
   peers: config.node.peers,
+  id: config.node.address
 });
  
 dem.on('added', (data) => {
@@ -72,13 +73,24 @@ dem.on('added', (data) => {
 
 // Each citizen will report status on jobs here
 // which will then be sent to the ui via socketio
-dem.on('status', (data) => {
+dem.on('completed', (data) => {
   delete awaiting[data.completed_id]
   io.emit('BACKQUEUE', awaiting);
 
 });
 
-dem.subscribe('status');
+dem.on('received', (data) => {
+  console.log('received test: ',data)
+  //delete awaiting[data.completed_id]
+  data.received.map(jobId => {
+    awaiting[JobId].client = data.hostname
+  })
+  io.emit('RECEIVED', awaiting);
+});
+
+// move this to channels: [] in democracy later
+dem.subscribe('completed');
+dem.subscribe('received');
  
 dem.on('removed', (data) => {
   console.log('Removed peer from rotation: ', data);
@@ -91,13 +103,6 @@ dem.on('elected', (data) => {
     .catch(onError);
 
 });
-function test(){
-  console.log("START SOCKETIO testing")
-  setInterval(() => {
-    io.emit('BACKQUEUE', { data: 'backqueue test' });
-  },1000)
-  
-}
  
 function ready() {
 
@@ -114,8 +119,9 @@ function ready() {
         priority: res.priority,
         file_type: res.stats.file_type,
         mission: res.stats.mission,
+        directory: res.stats.directory,
+        client: '',
       } 
-      console.log("JOB DATA: ",job_data)
       awaiting[res.id] = job_data
       io.emit('BACKQUEUE', awaiting);
 
@@ -138,10 +144,9 @@ function ready() {
     console.log("FILE FROM WATCH: ",file)
     let base_path = path.dirname(file)
     const file_name = path.basename(file)
-    /*let file_type = path.extname(file)
-    const mission = fUtil.getMission(file_name)*/
     stats.file_type = path.extname(file)
     stats.mission = fUtil.getMission(file_name)
+    stats.directory = base_path
 
     // Get priority from config using the directory as key
     let priority = config.watcher.directories[base_path].priority
@@ -159,6 +164,8 @@ function ready() {
           priority: priority,
           file_type: stats.file_type,
           mission: stats.mission,
+          directory: stats.directory,
+          client: ''
         } 
         // Update UI with new awaiting download list 
         awaiting[jobId] = job_data
