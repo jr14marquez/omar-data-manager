@@ -1,3 +1,7 @@
+<template>
+  
+</template>
+
 <script>
 import {Line} from 'vue-chartjs'
 
@@ -20,3 +24,8 @@ export default {
     }, {responsive: true, maintainAspectRatio: false})
   }
 }
+</script>
+
+
+
+
