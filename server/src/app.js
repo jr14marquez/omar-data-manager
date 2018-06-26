@@ -87,7 +87,7 @@ dem.on('received', (data) => {
     received_list.push(order_dict[JobId])
   })
   io.emit('ORDER_QUEUE', order_dict);
-  io.emit('CLIENT_QUEUE',received_list)
+  io.emit('INGEST_QUEUE',received_list)
 });
 
 // move this to channels: [] in democracy later
