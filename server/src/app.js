@@ -18,7 +18,7 @@ const chokidar = require('chokidar');
 const config = require('./config/config.js')
 const PgBoss = require('pg-boss');
 const jm = require('./lib/JobManager.js')
-const awaiting = {}
+const order_dict = {}
 const fUtil = require('./lib/FileUtil.js')
 
 const options = Object.assign(config.postgres,config.jobQueue)
@@ -40,8 +40,9 @@ app.get('/',function(req,res){
 io.on('connection', function(socket){
   console.log('a user connected');
   //setInterval(() => {
-    console.log('Emitting backqueue to connected clients')
-    io.emit('BACKQUEUE', awaiting);
+    console.log('Emitting order_queue to connected clients')
+    io.emit('ORDER_QUEUE', order_dict);
+    io.emit('MONITORED_DIRECTORIES',config.watcher.directories)
   //},10000)
 });
 
@@ -74,18 +75,19 @@ dem.on('added', (data) => {
 // Each citizen will report status on jobs here
 // which will then be sent to the ui via socketio
 dem.on('completed', (data) => {
-  delete awaiting[data.completed_id]
-  io.emit('BACKQUEUE', awaiting);
+  delete order_dict[data.completed_id]
+  io.emit('ORDER_QUEUE', order_dict);
 
 });
 
 dem.on('received', (data) => {
-  console.log('received test: ',data)
-  //delete awaiting[data.completed_id]
+  let received_list = []
   data.received.map(jobId => {
-    awaiting[JobId].client = data.hostname
+    order_dict[JobId].client = data.hostname
+    received_list.push(order_dict[JobId])
   })
-  io.emit('RECEIVED', awaiting);
+  io.emit('ORDER_QUEUE', order_dict);
+  io.emit('CLIENT_QUEUE',received_list)
 });
 
 // move this to channels: [] in democracy later
@@ -122,8 +124,8 @@ function ready() {
         directory: res.stats.directory,
         client: '',
       } 
-      awaiting[res.id] = job_data
-      io.emit('BACKQUEUE', awaiting);
+      order_dict[res.id] = job_data
+      io.emit('ORDER_QUEUE', order_dict);
 
     })    
   })
@@ -156,7 +158,7 @@ function ready() {
       .then(jobId => {
         console.log(`created ingest-job ${jobId} for file: ${file}`)
         
-        //Add to boss's awaiting report
+        //Add to boss's order_dict report
         const job_data = {
           filename: file_name,
           size: filesize(stats.size),
@@ -167,9 +169,9 @@ function ready() {
           directory: stats.directory,
           client: ''
         } 
-        // Update UI with new awaiting download list 
-        awaiting[jobId] = job_data
-        io.emit('BACKQUEUE', awaiting);
+        // Update UI with new order_dict download list 
+        order_dict[jobId] = job_data
+        io.emit('ORDER_QUEUE', order_dict);
       })
       .catch(onError);
    });
