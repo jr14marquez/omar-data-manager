@@ -1,7 +1,6 @@
 <template>
-  <div>
+  <div class="queue-table">
    <stat-table :tsize="'small'" :tdata="orderQueue" :tfields="fields"></stat-table>
-   <b-pagination align="center" size="md" :total-rows="jobLength" v-model="currentPage" :per-page="8"></b-pagination>
  </div>
 </template>
 
@@ -17,9 +16,6 @@ export default {
     return {
       message: '',
       response: 'Server has not yet replied.',
-      currentPage: 1,
-      jobsPerPage: 8,
-      jobLength: 8,
       fields: ['filename', 'size', 'created', 'priority', 'file_type', 'mission'],
       items: [{ file_name: '', size: '', created: '', priority: '', file_type: '', mission: '' }],
       testData: [
@@ -45,17 +41,17 @@ export default {
   computed: {
     orderQueue: function () {
       let jobs = this.$store.getters.getOrderQueue.length !== 0 ? this.$store.getters.getOrderQueue : this.items
-      this.jobLength = jobs.length - 1
-      let start = (this.currentPage - 1) * this.jobsPerPage
-      let defaultEnd = this.currentPage * this.jobsPerPage
-      let end = defaultEnd < this.jobLength ? defaultEnd : this.jobLength
-      let paginationJobs = []
-      for (var i = start; i < end; i++) {
-        paginationJobs.push(jobs[i])
-      }
-      // return jobs
-      console.log('pageinationJobs', paginationJobs)
-      return paginationJobs
+      // let start = (this.currentPage - 1) * this.jobsPerPage
+      // let defaultEnd = this.currentPage * this.jobsPerPage
+      // let end = defaultEnd < this.jobLength ? defaultEnd : this.jobLength
+      // let paginationJobs = []
+      // for (var i = start; i < end; i++) {
+      //   paginationJobs.push(jobs[i])
+      // }
+      // // return jobs
+      // console.log('pageinationJobs', paginationJobs)
+      // return paginationJobs
+      return jobs
     }
   }
 }
@@ -63,8 +59,9 @@ export default {
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
-.table {
-  
+.queue-table {
+  height: 100%;
+  overflow-y: auto;
 }
 
 .table-responsive {

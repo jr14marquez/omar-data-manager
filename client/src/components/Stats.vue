@@ -16,7 +16,10 @@
 
     <b-row v-show="'Queues' == selected" class="justify-content-center" style="height:85%;">
       <b-col class="stat-widget-col"><directoryQueue></directoryQueue></b-col>
-      <b-col md="6" cols="6" class="stat-widget-col"></b-col>
+    </b-row>
+
+    <b-row v-show="'Ingest' == selected" class="justify-content-center" style="height:85%;">
+      <b-col class="stat-widget-col"><ingestQueue></ingestQueue></b-col>
     </b-row>
 
   </div>
@@ -26,13 +29,15 @@
 import OrderQueue from './OrderQueue.vue'
 import OrderQueueDonut from './OrderQueueDonut.vue'
 import DirectoryQueue from './DirectoryQueue.vue'
+import IngestQueue from './IngestQueue.vue'
 
 export default {
   name: 'Stats',
   components: {
     OrderQueue,
     OrderQueueDonut,
-    DirectoryQueue
+    DirectoryQueue,
+    IngestQueue
   },
   data () {
     return {

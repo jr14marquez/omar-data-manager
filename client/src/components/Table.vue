@@ -1,7 +1,5 @@
 <template>
-  <div>
-    <b-table :small="tsize" responsive head-variant="dark" striped :fields="tfields" :items="tdata"></b-table>
- </div>
+    <b-table :small="tsize" outlined responsive head-variant="dark" striped :fields="tfields" :items="tdata"></b-table>
 </template>
 
 <script>
@@ -26,9 +24,6 @@ export default {
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
-.table {
-  
-}
 
 .table-responsive {
   height:100%;

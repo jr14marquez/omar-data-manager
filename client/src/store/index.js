@@ -7,9 +7,9 @@ export default new Vuex.Store({
   state: {
     connected: false,
     error: '',
-    directoryQueue: {},
+    directoryQueues: {},
     orderQueue: [],
-    clientQueue: []
+    ingestQueue: []
   },
   mutations: {
     SOCKET_CONNECT (state) {
@@ -27,13 +27,14 @@ export default new Vuex.Store({
         dirDict[dir] = directories[0][dir]
         dirDict[dir].jobs = []
       })
-      state.directories = dirDict
+      state.directoryQueues = dirDict
     },
     SOCKET_ORDER_QUEUE (state, orderQueue) {
       state.orderQueue = orderQueue
     },
-    SOCKET_CLIENT_QUEUE (state, clientQueue) {
-      state.clientQueue = clientQueue
+    SOCKET_INGEST_QUEUE (state, ingestQueue) {
+      console.log('ingestQueue in socket store: ', ingestQueue)
+      state.ingestQueue = ingestQueue
     }
   },
   getters: {
@@ -41,18 +42,18 @@ export default new Vuex.Store({
       let queue = state.orderQueue[0] != null ? Object.values(state.orderQueue[0]) : []
       return queue
     },
-    getClientQueue (state) {
-      let queue = state.clientQueue[0] != null ? Object.values(state.clientQueue[0]) : []
+    getIngestQueue (state) {
+      let queue = state.ingestQueue[0] != null ? Object.values(state.ingestQueue[0]) : []
       return queue
     },
     getDirectoryQueue (state) {
-      let dirQueue = state.directoryQueue
-      console.log('dir queue in getDirQueue: ', dirQueue)
+      let dirQueues = state.directoryQueues
+      console.log('dir queue in getDirQueue: ', dirQueues)
       let orderQueue = state.orderQueue[0] != null ? Object.values(state.orderQueue[0]) : []
       orderQueue.map(job => {
-        dirQueue[job.directory].jobs.push(job)
+        dirQueues[job.directory].jobs.push(job)
       })
-      return dirQueue
+      return dirQueues
     }
   }
 })
