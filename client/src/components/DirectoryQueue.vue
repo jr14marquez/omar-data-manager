@@ -1,6 +1,6 @@
 <template>
   <div>
-   <stat-table :tsize="'small'" :tdata="backQueue" :tfields="fields"></stat-table>
+   <stat-table :tsize="'small'" :tdata="DirectoryQueue" :tfields="fields"></stat-table>
    <b-pagination align="center" size="md" :total-rows="jobLength" v-model="currentPage" :per-page="8"></b-pagination>
  </div>
 </template>
@@ -9,7 +9,7 @@
 import StatTable from './Table.vue'
 
 export default {
-  name: 'BackQueue',
+  name: 'DirectoryQueue',
   components: {
     StatTable
   },
@@ -43,8 +43,11 @@ export default {
   watch: {
   },
   computed: {
-    backQueue: function () {
-      let jobs = this.$store.getters.getBackQueue.length !== 0 ? this.$store.getters.getBackQueue : this.items
+    DirectoryQueue: function () {
+      let jobs = this.$store.getters.getOrderQueue.length !== 0 ? this.$store.getters.getOrderQueue : this.items
+      let dirJobs = this.$store.getters.getDirectoryQueue
+      console.log('dirJobs in component: ', dirJobs)
+
       this.jobLength = jobs.length - 1
       let start = (this.currentPage - 1) * this.jobsPerPage
       let defaultEnd = this.currentPage * this.jobsPerPage

@@ -8,34 +8,36 @@
     </b-nav>
 
     <!--CHART AND TABLE-->
-    <b-row v-show="'BackQueue' == selected" class="justify-content-center" style="height:85%;">
+    <b-row v-show="'OrderQueue' == selected" class="justify-content-center" style="height:85%;">
       <!--<b-col md="6" cols="6" style=""><line-example></line-example></b-col>-->
-      <b-col md="6" cols="6" class="stat-widget-col"><backQueueDonut></backQueueDonut></b-col>
-      <b-col md="6" cols="6" class="stat-widget-col"><backQueue></backQueue></b-col>
+      <b-col md="6" cols="6" class="stat-widget-col"><orderQueueDonut></orderQueueDonut></b-col>
+      <b-col md="6" cols="6" class="stat-widget-col"><orderQueue></orderQueue></b-col>
     </b-row>
 
     <b-row v-show="'Queues' == selected" class="justify-content-center" style="height:85%;">
-      <b-col class="stat-widget-col"></b-col>
-      <b-col md="6" cols="6" class="stat-widget-col"><backQueue></backQueue></b-col>
+      <b-col class="stat-widget-col"><directoryQueue></directoryQueue></b-col>
+      <b-col md="6" cols="6" class="stat-widget-col"></b-col>
     </b-row>
 
   </div>
 </template>
 
 <script>
-import BackQueue from './BackQueue.vue'
-import BackQueueDonut from './BackQueueDonut.vue'
+import OrderQueue from './OrderQueue.vue'
+import OrderQueueDonut from './OrderQueueDonut.vue'
+import DirectoryQueue from './DirectoryQueue.vue'
 
 export default {
   name: 'Stats',
   components: {
-    BackQueue,
-    BackQueueDonut
+    OrderQueue,
+    OrderQueueDonut,
+    DirectoryQueue
   },
   data () {
     return {
-      stat_labels: [{ name: 'BackQueue' }, { name: 'Queues' }, { name: 'Ingest' }, { name: 'Failed' }],
-      selected: 'BackQueue'
+      stat_labels: [{ name: 'OrderQueue' }, { name: 'Queues' }, { name: 'Ingest' }, { name: 'Failed' }],
+      selected: 'OrderQueue'
     }
   },
   methods: {

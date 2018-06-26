@@ -8,8 +8,8 @@ import Chart from 'chart.js'
 export default {
   data () {
     return {
-      stat_labels: [{ name: 'BackQueue' }, { name: 'Queues' }, { name: 'Ingest' }, { name: 'Failed' }],
-      selected: 'BackQueue',
+      stat_labels: [{ name: 'OrderQueue' }, { name: 'Queues' }, { name: 'Ingest' }, { name: 'Failed' }],
+      selected: 'OrderQueue',
       items: [{ file_name: '', size: '', created: '', priority: '', file_type: '', mission: '' }],
       mission_chart: {},
       chart_data: {
@@ -33,14 +33,14 @@ export default {
     }
   },
   created () {
-    let jobs = this.$store.getters.getBackQueue.length !== 0 ? this.$store.getters.getBackQueue : this.items
+    let jobs = this.$store.getters.getOrderQueue.length !== 0 ? this.$store.getters.getOrderQueue : this.items
     console.log('jobs in donut: ', jobs)
   },
   mounted () {
     this.createChart('donut-chart', this.chart_data)
   },
   watch: {
-    backQueue (jobs) {
+    orderQueue (jobs) {
       console.log('in watch')
       var counts = {}
       jobs.map(job => { counts[job.mission] = (counts[job.mission] || 0) + 1 })
@@ -53,8 +53,8 @@ export default {
     }
   },
   computed: {
-    backQueue: function () {
-      let jobs = this.$store.getters.getBackQueue.length !== 0 ? this.$store.getters.getBackQueue : this.items
+    orderQueue: function () {
+      let jobs = this.$store.getters.getOrderQueue.length !== 0 ? this.$store.getters.getOrderQueue : this.items
       return jobs
     }
   }
