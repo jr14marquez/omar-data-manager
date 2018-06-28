@@ -27,14 +27,12 @@ export default {
       const ctx = document.getElementById(chartId)
       this.mission_chart = new Chart(ctx, {
         type: 'doughnut',
-        data: chartData,
+        data: this.chart_data,
         options: {}
       })
     }
   },
   created () {
-    let jobs = this.$store.getters.getOrderQueue.length !== 0 ? this.$store.getters.getOrderQueue : this.items
-    console.log('jobs in donut: ', jobs)
   },
   mounted () {
     this.createChart('donut-chart', this.chart_data)
@@ -44,16 +42,14 @@ export default {
       console.log('in watch')
       var counts = {}
       jobs.map(job => { counts[job.mission] = (counts[job.mission] || 0) + 1 })
-      Object.keys(counts).map(mission => {
-        this.chart_data.datasets[0].data.push(counts[mission])
-        this.chart_data.labels.push(mission)
-      })
-      // this.mission_chart.destroy()
-      this.createChart('donut-chart', this.chart_data)
+      this.chart_data.datasets[0].data = Object.values(counts)
+      this.chart_data.labels = Object.keys(counts)
+      this.mission_chart.update()
     }
   },
   computed: {
     orderQueue: function () {
+      console.log('in orderQueue computed prop')
       let jobs = this.$store.getters.getOrderQueue.length !== 0 ? this.$store.getters.getOrderQueue : this.items
       return jobs
     }

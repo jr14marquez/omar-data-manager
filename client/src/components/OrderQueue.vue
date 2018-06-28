@@ -41,16 +41,6 @@ export default {
   computed: {
     orderQueue: function () {
       let jobs = this.$store.getters.getOrderQueue.length !== 0 ? this.$store.getters.getOrderQueue : this.items
-      // let start = (this.currentPage - 1) * this.jobsPerPage
-      // let defaultEnd = this.currentPage * this.jobsPerPage
-      // let end = defaultEnd < this.jobLength ? defaultEnd : this.jobLength
-      // let paginationJobs = []
-      // for (var i = start; i < end; i++) {
-      //   paginationJobs.push(jobs[i])
-      // }
-      // // return jobs
-      // console.log('pageinationJobs', paginationJobs)
-      // return paginationJobs
       return jobs
     }
   }

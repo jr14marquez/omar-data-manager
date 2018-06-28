@@ -9,7 +9,8 @@ export default new Vuex.Store({
     error: '',
     directoryQueues: {},
     orderQueue: [],
-    ingestQueue: []
+    ingestQueue: {},
+    clientStatus: { active: [], removed: [] }
   },
   mutations: {
     SOCKET_CONNECT (state) {
@@ -33,8 +34,17 @@ export default new Vuex.Store({
       state.orderQueue = orderQueue
     },
     SOCKET_INGEST_QUEUE (state, ingestQueue) {
-      console.log('ingestQueue in socket store: ', ingestQueue)
-      state.ingestQueue = ingestQueue
+      console.log('*******************ingest queue*********************************', ingestQueue)
+      state.ingestQueue = ingestQueue[0]
+    },
+    SOCKET_CLIENT_STATUS (state, clientStatus) {
+      // Client status comes in before everything else so we prepare our data
+      clientStatus[0].active.map(client => {
+        // var obj = {}
+        // obj[client] = {jobs: []}
+        state.ingestQueue[client] = {jobs: []}
+      })
+      state.clientStatus = clientStatus[0]
     }
   },
   getters: {
@@ -43,8 +53,10 @@ export default new Vuex.Store({
       return queue
     },
     getIngestQueue (state) {
-      let queue = state.ingestQueue[0] != null ? Object.values(state.ingestQueue[0]) : []
-      return queue
+      return state.ingestQueue
+    },
+    getClientStatus (state) {
+      return state.clientStatus
     },
     getDirectoryQueue (state) {
       let dirQueues = state.directoryQueues

@@ -6,8 +6,8 @@
         <div class="widget-body">
           <div class="quick-stat-widget-inner">
             <div class="quick-stat">
-              <b-col class="quick-stat-number">29</b-col>
-              <b-col class="quick-stat-name">Submitted</b-col>
+              <b-col class="quick-stat-number">{{orderQueue}}</b-col>
+              <b-col class="quick-stat-name">Ordered</b-col>
             </div>
           </div>
         </div>
@@ -19,8 +19,8 @@
         <div class="widget-body">
           <div class="quick-stat-widget-inner">
             <div class="quick-stat">
-              <b-col class="quick-stat-number">29</b-col>
-              <b-col class="quick-stat-name">Submitted</b-col>
+              <b-col class="quick-stat-number">{{ingestQueue}}</b-col>
+              <b-col class="quick-stat-name">Ingesting</b-col>
             </div>
           </div>
         </div>
@@ -32,8 +32,8 @@
         <div class="widget-body">
           <div class="quick-stat-widget-inner">
             <div class="quick-stat">
-              <b-col class="quick-stat-number">29</b-col>
-              <b-col class="quick-stat-name">Submitted</b-col>
+              <b-col class="quick-stat-number">{{clientStatus}}</b-col>
+              <b-col class="quick-stat-name">Clients</b-col>
             </div>
           </div>
         </div>
@@ -45,8 +45,8 @@
         <div class="widget-body">
           <div class="quick-stat-widget-inner">
             <div class="quick-stat">
-              <b-col class="quick-stat-number">29</b-col>
-              <b-col class="quick-stat-name">Submitted</b-col>
+              <b-col class="quick-stat-number">0</b-col>
+              <b-col class="quick-stat-name">Failed</b-col>
             </div>
           </div>
         </div>
@@ -72,6 +72,22 @@ export default {
   watch: {
   },
   computed: {
+    orderQueue () {
+      console.log('in orderQueue for quick stats')
+      let jobs = this.$store.getters.getOrderQueue.length
+      return jobs
+    },
+    ingestQueue () {
+      // Returns DirecotoryQueue in form {'/directory/name': {jobs:[data]}}
+      let queues = this.$store.getters.getIngestQueue != null ? this.$store.getters.getIngestQueue.length : 0
+      console.log('ingestQueues in quick stats', queues)
+      return queues
+    },
+    clientStatus () {
+      let clients = this.$store.getters.getClientStatus
+      console.log('client status', clients)
+      return clients.active.length
+    }
   }
 }
 </script>
