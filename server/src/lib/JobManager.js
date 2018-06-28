@@ -7,21 +7,22 @@ exports.ingest = (jobs,dem) => {
   let job_ids = []
   jobs.map((job) => { job_ids.push(job.id) })
   //REPORT back number of ingest jobs received.
-  dem.publish('received', { host: dem.options.id, received: job_ids})
-	
+  console.log('job ids : ', job_ids)
+  dem.publish('received', { hostname: dem.options.id, received: job_ids})
+	console.log('in ingest')
 	jobs.map((job) => {
-      //mvFile(job.data.file)
-      fUtil.mvFile(job.data.file,config.archive_dir)
-      .then(() => {
-      	//Run omar-data-manager cmdl app to ingest imagery
-      	job.done()
-        .then(() => {
-        	console.log(`ingest-job ${job.id} completed`)
-        	dem.publish('completed', {completed_id: job.id});
-        })
-        .catch(onError)
-      })     
-    })
+
+      // fUtil.mvFile(job.data.file,config.archive_dir)
+      //   .then(() => {
+      //   	//Run omar-data-manager cmdl app to ingest imagery
+         	job.done()
+           .then(() => {
+          	console.log(`ingest-job ${job.id} completed`)
+           	dem.publish('completed', {completed_id: job.id})
+           })
+           .catch(onError)
+      //}) 
+  })
 }
 
 
