@@ -57,7 +57,7 @@ var dem = new Democracy({
   source: config.node.address,
   peers: config.node.peers,
   id: config.node.address,
-  channels: ['completed','received','ordered','joined'],
+  channels: ['completed','received','ordered'],
 });
  
 dem.options.test3 = 'hello3'
@@ -125,22 +125,23 @@ dem.on('added', (data) => {
   ** and all others to the rotation along with subscribing myself 
   ** to the ingest queue. I then add myself to the client dictionary.
   */
-  console.log('added: ', new Date())
+  /*console.log('added: ', new Date())
   if(dem.isLeader()){
     console.log('data in leader: ',data)
     client_dict[data.id] = { jobs: [], active: true } //Add peer 
     io.emit('CLIENT_STATUS', clientStatus())
     dem.publish('joined',{ id: data.id, client_dict: client_dict, order_dict: order_dict })
-  }
+  }*/
 });
 
 /* Emitted by Leader when someone has joined the rotation. Only citizen nodes 
 ** receive this. The node that has just joined will subscribe and start working.
 */
 dem.on('joined', (data) => {
+  console.log('in joined for cit')
   // wait until the leader has checked in/has been added
   console.log('do i have a leader: ', dem.leader())
-  client_dict = data.client_dict // Get client dictionary from master and set for all nodes
+
   if(dem.options.id === data.id){
     console.log('I have just joined the rotation so i subscribe and get to work.')
     boss.connect()
@@ -157,9 +158,22 @@ dem.on('joined', (data) => {
           .catch(onError);
       })
       .catch(onError);
-  } 
+  } else {
+    client_dict[data.id] =  { jobs: [], active: true } //Add peer
+  }
+
 })
 
+dem.send('join',{ id: dem.options.id })
+dem.on('join', (data) => {
+  console.log('in join')
+  if(dem.isLeader()){
+    console.log('data in leader: ',data)
+    client_dict[data.id] = { jobs: [], active: true } //Add peer 
+    io.emit('CLIENT_STATUS', clientStatus())
+    dem.send('joined',{ id: data.id, client_dict: client_dict, order_dict: order_dict })
+  }
+})
   
 function ready() {
 
