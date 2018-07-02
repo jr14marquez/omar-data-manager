@@ -73,19 +73,23 @@ export default {
   },
   computed: {
     orderQueue () {
-      console.log('in orderQueue for quick stats')
+      // console.log('in orderQueue for quick stats')
       let jobs = this.$store.getters.getOrderQueue.length
       return jobs
     },
     ingestQueue () {
-      // Returns DirecotoryQueue in form {'/directory/name': {jobs:[data]}}
-      let queues = this.$store.getters.getIngestQueue != null ? this.$store.getters.getIngestQueue.length : 0
-      console.log('ingestQueues in quick stats', queues)
-      return queues
+      // let queues = this.$store.getters.getIngestQueue != null ? this.$store.getters.getIngestQueue.length : 0
+      let queues = this.$store.getters.getIngestQueue
+      var runningTotal = 0
+      Object.keys(queues).map(queue => {
+        runningTotal = runningTotal + Object.keys(queues[queue].jobs).length
+      })
+      // console.log('ingestQueues in quick stats', queues)
+      return runningTotal
     },
     clientStatus () {
       let clients = this.$store.getters.getClientStatus
-      console.log('client status', clients)
+      // console.log('client status', clients)
       return clients.active.length
     }
   }

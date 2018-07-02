@@ -6,7 +6,7 @@
           <!--<b-tab class="h-100" v-for="client,index in Object.keys(IngestQueues)">-->
           <b-tab class="h-100" v-for="client,index in clientStatus.active">
             <template slot="title">
-              {{client}}: <b-badge variant="dark">{{IngestQueues[client].jobs.length}}</b-badge>
+              {{client}}: <b-badge variant="dark">{{Object.keys(IngestQueues[client].jobs).length}}</b-badge>
             </template>
             <b-row class="h-100">
               <b-col md="6" cols="6" class="h-100">
@@ -15,7 +15,7 @@
                   <!--<h5><b-badge variant="seondary">Priority: {{DirectoryQueues[dir].priority}}</b-badge></h5>
                   <h5><b-badge variant="seondary">Extensions: {{DirectoryQueues[dir].extensions}}</b-badge></h5>-->
                 </b-row>
-                <stat-table style="height:90%;border:solid 1px #9e9e9e;" :tsize="'small'" :tdata="IngestQueues[client].jobs" :tfields="fields"></stat-table>
+                <stat-table style="height:90%;border:solid 1px #9e9e9e;" :tsize="'small'" :tdata="Object.values(IngestQueues[client].jobs)" :tfields="fields"></stat-table>
               </b-col>
               <b-col md="6" cols="4" class="h-100">
                 <p>charts comming</p>
@@ -48,25 +48,20 @@ export default {
   methods: {
   },
   mounted () {
-    var test = this.IngestQueues
-    console.log('test ingest : ', test)
   },
   watch: {
-    IngestQueues (clients) {
-      console.log('in watch for ingest queue')
-      console.log('watch for iq: ', clients)
-    }
+    // IngestQueues (clients) {
+    //   console.log('in watch for ingest queue')
+    //   console.log('watch for iq: ', clients)
+    // }
   },
   computed: {
     clientStatus () {
       let clients = this.$store.getters.getClientStatus
-      console.log('client status', clients)
       return clients
     },
     IngestQueues: function () {
-      console.log('client status in here: ', this.clientStatus)
       let queues = this.$store.getters.getIngestQueue
-      console.log('ingestQueues in component **********', queues)
       return queues
     }
   }

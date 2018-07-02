@@ -1,6 +1,6 @@
 <template>
   <div class="queue-table">
-   <stat-table :tsize="'small'" :tdata="orderQueue" :tfields="fields"></stat-table>
+   <stat-table style="height:90%;border:solid 1px #9e9e9e;" :tsize="'small'" :tdata="orderQueue" :tfields="fields"></stat-table>
  </div>
 </template>
 

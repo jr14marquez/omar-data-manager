@@ -15,7 +15,7 @@ export default {
       chart_data: {
         datasets: [{
           data: [],
-          backgroundColor: ['#FF0000', '#FFFF00', '#84FF63', '#4422dd', '#000000']
+          backgroundColor: ['#FF0000', '#FFFF00', '#FF8C00', '#84FF63', '#4422dd', '#000000']
         }],
         labels: []
       }
@@ -23,7 +23,6 @@ export default {
   },
   methods: {
     createChart (chartId, chartData) {
-      console.log('create chart called')
       const ctx = document.getElementById(chartId)
       this.mission_chart = new Chart(ctx, {
         type: 'doughnut',
@@ -39,7 +38,6 @@ export default {
   },
   watch: {
     orderQueue (jobs) {
-      console.log('in watch')
       var counts = {}
       jobs.map(job => { counts[job.mission] = (counts[job.mission] || 0) + 1 })
       this.chart_data.datasets[0].data = Object.values(counts)
@@ -49,7 +47,6 @@ export default {
   },
   computed: {
     orderQueue: function () {
-      console.log('in orderQueue computed prop')
       let jobs = this.$store.getters.getOrderQueue.length !== 0 ? this.$store.getters.getOrderQueue : this.items
       return jobs
     }

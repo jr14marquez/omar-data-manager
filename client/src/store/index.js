@@ -9,7 +9,7 @@ export default new Vuex.Store({
     error: '',
     directoryQueues: {},
     orderQueue: [],
-    ingestQueue: {},
+    ingestQueue: [],
     clientStatus: { active: [], removed: [] }
   },
   mutations: {
@@ -26,7 +26,8 @@ export default new Vuex.Store({
       let dirDict = {}
       Object.keys(directories[0]).map(dir => {
         dirDict[dir] = directories[0][dir]
-        dirDict[dir].jobs = []
+        // dirDict[dir].jobs = []
+        dirDict[dir].jobs = {}
       })
       state.directoryQueues = dirDict
     },
@@ -34,15 +35,12 @@ export default new Vuex.Store({
       state.orderQueue = orderQueue
     },
     SOCKET_INGEST_QUEUE (state, ingestQueue) {
-      console.log('*******************ingest queue*********************************', ingestQueue)
       state.ingestQueue = ingestQueue[0]
     },
     SOCKET_CLIENT_STATUS (state, clientStatus) {
       // Client status comes in before everything else so we prepare our data
       clientStatus[0].active.map(client => {
-        // var obj = {}
-        // obj[client] = {jobs: []}
-        state.ingestQueue[client] = {jobs: []}
+        state.ingestQueue[client] = {jobs: {}}
       })
       state.clientStatus = clientStatus[0]
     }
@@ -60,12 +58,17 @@ export default new Vuex.Store({
     },
     getDirectoryQueue (state) {
       let dirQueues = state.directoryQueues
-      console.log('dir queue in getDirQueue: ', dirQueues)
-      let orderQueue = state.orderQueue[0] != null ? Object.values(state.orderQueue[0]) : []
-      orderQueue.map(job => {
-        dirQueues[job.directory].jobs.push(job)
-      })
-      return dirQueues
+      let orderQueue = state.orderQueue[0] != null ? Object.keys(state.orderQueue[0]) : []
+      if (orderQueue.length > 0) {
+        orderQueue.map(jobId => {
+          let directory = state.orderQueue[0][jobId].directory
+          dirQueues[directory].jobs[jobId] = state.orderQueue[0][jobId]
+        })
+        return dirQueues
+      } else {
+        dirQueues = []
+        return dirQueues
+      }
     }
   }
 })
