@@ -70,6 +70,52 @@ dem.on('elected', (data) => {
 
 });
 
+/* This event is fired on all nodes. Only the new node
+** will wait for the leader to be added to his rotation
+** before firing off the join event to all the others.
+*/
+dem.on('added', (data) => {
+  if(data.state == 'leader') {
+    dem.send('join',{ id: dem.options.id })
+  }
+});
+
+
+dem.on('joined', (data) => {
+  // Add peer to others 
+  if(dem.options.id != data.id){
+    // client_dict[data.id] =  { jobs: [], active: true } //Add peer
+    client_dict[data.id] =  { jobs: {}, active: true } //Add peer
+  } 
+  else {
+    console.log('I have just joined the rotation so i subscribe and get to work.')
+    boss.connect()
+      .then(boss => {
+        client_dict = data.client_dict
+        order_dict = data.order_dict // Get order dictionary from master for new node
+        console.log('connected so now we need to subscribe')
+        boss.subscribe('ingest', {batchSize: 5 }, job => jm.ingest(job,dem))
+          .then(() => { 
+            console.log('subscribed to ingest queue')
+            console.log('client status in joined: ', clientStatus())
+            io.emit('CLIENT_STATUS', clientStatus())
+            
+          })
+          .catch(onError);
+      })
+      .catch(onError);
+  }
+})
+
+dem.on('join', (data) => {
+  if(dem.isLeader()){
+    // client_dict[data.id] = { jobs: [], active: true } //Add peer 
+    client_dict[data.id] = { jobs: {}, active: true } //Add peer 
+    io.emit('CLIENT_STATUS', clientStatus())
+    dem.send('joined',{ id: data.id, client_dict: client_dict, order_dict: order_dict })
+  }
+})
+
 dem.on('removed', (data) => {
   console.log('Removed peer from rotation: ', data.id);
   client_dict[data.id].active = false
@@ -81,12 +127,10 @@ dem.on('removed', (data) => {
 // Each citizen will report status on jobs here
 // which will then be sent to the ui via socketio
 dem.on('completed', (data) => {
-  console.log('completed job need to delete id: ', data.completed_id)
-  console.log('order dict before: ', order_dict)
   delete order_dict[data.completed_id]
-  console.log('order_dict after deleted: ', order_dict)
+  delete client_dict[data.hostname].jobs[data.completed_id]
   io.emit('ORDER_QUEUE', order_dict);
-
+  io.emit('INGEST_QUEUE', client_dict);
 })
 
 dem.on('received', (data) => {
@@ -100,15 +144,11 @@ dem.on('received', (data) => {
   ** the jobs into the client dictionary
   **/
   data.received.map(jobId => {
-    if(client_dict[data.hostname].hasOwnProperty('jobs')) {
-      client_dict[data.hostname].jobs.push(order_dict[jobId])
-    } else {
-      //should never come here now. will remove later
-       client_dict[data.hostname] = { jobs:[] }
-       client_dict[data.hostname].jobs.push(order_dict[jobId])
-    }
+    //if(client_dict[data.hostname].hasOwnProperty('jobs')) {
+      // client_dict[data.hostname].jobs.push(order_dict[jobId])
+      client_dict[data.hostname].jobs[jobId] = order_dict[jobId]
+    //}
   })
-
   io.emit('INGEST_QUEUE', client_dict);
 });
 
@@ -116,64 +156,7 @@ dem.on('ordered', (data) => {
   order_dict = data
 })
 
-dem.on('added', (data) => {
-  /* At this point a peer has been added to the rotation.
-  ** The client/citizen is added to the client dictionary 
-  ** by hostname/id for job tracking. This method is normally
-  ** fired when another peer is added to the rotation. So if i am
-  ** fired up and there is already a leader then i will add the leader
-  ** and all others to the rotation along with subscribing myself 
-  ** to the ingest queue. I then add myself to the client dictionary.
-  */
-  /*console.log('added: ', new Date())
-  if(dem.isLeader()){
-    console.log('data in leader: ',data)
-    client_dict[data.id] = { jobs: [], active: true } //Add peer 
-    io.emit('CLIENT_STATUS', clientStatus())
-    dem.publish('joined',{ id: data.id, client_dict: client_dict, order_dict: order_dict })
-  }*/
-});
 
-/* Emitted by Leader when someone has joined the rotation. Only citizen nodes 
-** receive this. The node that has just joined will subscribe and start working.
-*/
-dem.on('joined', (data) => {
-  console.log('in joined for cit')
-  // wait until the leader has checked in/has been added
-  console.log('do i have a leader: ', dem.leader())
-
-  if(dem.options.id === data.id){
-    console.log('I have just joined the rotation so i subscribe and get to work.')
-    boss.connect()
-      .then(boss => {
-        order_dict = data.order_dict // Get order dictionary from master for new node
-        console.log('connected so now we need to subscribe')
-        boss.subscribe('ingest', {batchSize: 5 }, job => jm.ingest(job,dem))
-          .then(() => { 
-            console.log('subscribed to ingest queue')
-            console.log('client status in joined: ', clientStatus())
-            io.emit('CLIENT_STATUS', clientStatus())
-            
-          })
-          .catch(onError);
-      })
-      .catch(onError);
-  } else {
-    client_dict[data.id] =  { jobs: [], active: true } //Add peer
-  }
-
-})
-
-dem.send('join',{ id: dem.options.id })
-dem.on('join', (data) => {
-  console.log('in join')
-  if(dem.isLeader()){
-    console.log('data in leader: ',data)
-    client_dict[data.id] = { jobs: [], active: true } //Add peer 
-    io.emit('CLIENT_STATUS', clientStatus())
-    dem.send('joined',{ id: data.id, client_dict: client_dict, order_dict: order_dict })
-  }
-})
   
 function ready() {
 
@@ -250,7 +233,8 @@ function ready() {
   // Subscribe to ingest queue, add myself to client_dict for job tracking
   // and do work if leader is also a citizen
   if(config.node.citizen){
-    client_dict[dem.options.id] = { jobs: [], active: true}
+    // client_dict[dem.options.id] = { jobs: [], active: true}
+    client_dict[dem.options.id] = { jobs: {}, active: true}
     boss.subscribe('ingest', {batchSize: 5 }, job => jm.ingest(job))
       .then(() => console.log('leader subscribed to ingest queue'))
       .catch(onError);

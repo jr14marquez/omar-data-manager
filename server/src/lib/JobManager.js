@@ -15,10 +15,10 @@ exports.ingest = (jobs,dem) => {
       // fUtil.mvFile(job.data.file,config.archive_dir)
       //   .then(() => {
       //   	//Run omar-data-manager cmdl app to ingest imagery
-         	job.done()
+         	  job.done()
            .then(() => {
           	console.log(`ingest-job ${job.id} completed`)
-           	dem.publish('completed', {completed_id: job.id})
+           	dem.publish('completed', { hostname: dem.options.id, completed_id: job.id})
            })
            .catch(onError)
       //}) 
