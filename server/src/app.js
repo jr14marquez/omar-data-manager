@@ -1,25 +1,19 @@
-const express = require('express')();
+const express = require('express')
 const bodyParser = require('body-parser')
 const cors = require('cors')
-express.use(bodyParser.json())
-express.use(cors())
-
-var app = require('express')();
+const path = require('path')
+var app = express()
 app.use(bodyParser.json())
 app.use(cors())
+app.use(express.static(path.join(__dirname, '../dist')))
 var server = require('http').Server(app);
 var io = require('socket.io')(server);
-
-const fs = require('fs')
 const filesize = require('filesize')
-const path = require('path')
 const Democracy = require('democracy');
 const chokidar = require('chokidar');
 const config = require('./config/config.js')
 const PgBoss = require('pg-boss');
 const jm = require('./lib/JobManager.js')
-var order_dict = {}
-var client_dict = {}
 const fUtil = require('./lib/FileUtil.js')
 
 const options = Object.assign(config.postgres,config.jobQueue)
@@ -33,37 +27,47 @@ catch(error){
 }
 
 boss.on('error', onError);
-boss.on('monitor-states', onMonitor);
 
 console.log("UI LISTENING ON: ",config.node.ui)
 server.listen(config.node.ui)
-app.get('/',function(req,res){
-  res.send('Health/Ingest UI coming soon...')
-})
+//app.get('/env',function(req,res){
+ // res.send('Send env to app')
+//})
 
 io.on('connection', function(socket){
   console.log('a user connected');
     console.log('Emitting order_queue to connected clients')
     io.emit('CLIENT_STATUS',clientStatus())
-    io.emit('ORDER_QUEUE', order_dict);
+    io.emit('ORDER_QUEUE', dem.order_dict);
     io.emit('MONITORED_DIRECTORIES',config.watcher.directories)
-    console.log('client status on connectiong: ', clientStatus()) 
+    console.log('client status on connecting: ', clientStatus()) 
 });
 
 
 // Basic usage of democracy to manage leader and citizen nodes.
-console.log("NODE STARTED ON: ",config.node.address)
+console.log(`NODE STARTED ON: ${config.node.address} with peers ${config.node.peers}`)
 var dem = new Democracy({
   source: config.node.address,
   peers: config.node.peers,
   id: config.node.address,
-  channels: ['completed','received','ordered'],
+  channels: ['completed','received','ordered',config.node.address],
 });
+dem.order_dict = {}
+dem.client_dict = {}
  
-dem.options.test3 = 'hello3'
-
 dem.on('elected', (data) => {
   console.log('You have been elected leader!');
+  // Add leader to client_dict if not already present
+  console.log('client dict in elected: ',dem.client_dict)
+
+  if(!dem.client_dict.hasOwnProperty(data.id)) {
+    if(config.node.citizen){
+      dem.client_dict[data.id] = { jobs: {}, active: true}
+    } else {
+      // might have to unsubscribe
+      dem.client_dict[data.id] = { jobs: {}, active: false}
+    }
+  }
   boss.start()
     .then(ready)
     .catch(onError);
@@ -84,22 +88,22 @@ dem.on('added', (data) => {
 dem.on('joined', (data) => {
   // Add peer to others 
   if(dem.options.id != data.id){
-    // client_dict[data.id] =  { jobs: [], active: true } //Add peer
-    client_dict[data.id] =  { jobs: {}, active: true } //Add peer
+    dem.client_dict[data.id] =  { jobs: {}, active: true } //Add peer
   } 
   else {
     console.log('I have just joined the rotation so i subscribe and get to work.')
     boss.connect()
       .then(boss => {
-        client_dict = data.client_dict
-        order_dict = data.order_dict // Get order dictionary from master for new node
+        dem.client_dict = data.client_dict
+        dem.order_dict = data.order_dict // Get order dictionary from master for new node
         console.log('connected so now we need to subscribe')
-        boss.subscribe('ingest', {batchSize: 5 }, job => jm.ingest(job,dem))
-          .then(() => { 
+        boss.subscribe('ingest', {batchSize: 5 }, job => {
+            jm.ingest(job,dem,io)
+          })
+          .then(() => {
             console.log('subscribed to ingest queue')
             console.log('client status in joined: ', clientStatus())
             io.emit('CLIENT_STATUS', clientStatus())
-            
           })
           .catch(onError);
       })
@@ -109,55 +113,46 @@ dem.on('joined', (data) => {
 
 dem.on('join', (data) => {
   if(dem.isLeader()){
-    // client_dict[data.id] = { jobs: [], active: true } //Add peer 
-    client_dict[data.id] = { jobs: {}, active: true } //Add peer 
+    dem.client_dict[data.id] = { jobs: {}, active: true } //Add peer 
     io.emit('CLIENT_STATUS', clientStatus())
-    dem.send('joined',{ id: data.id, client_dict: client_dict, order_dict: order_dict })
+    console.log('order dict in join: ', Object.keys(dem.order_dict).length)
+    dem.send('joined',{ id: data.id, client_dict: dem.client_dict, order_dict: dem.order_dict })
   }
 })
 
 dem.on('removed', (data) => {
   console.log('Removed peer from rotation: ', data.id);
-  client_dict[data.id].active = false
+  dem.client_dict[data.id].active = false
   io.emit('CLIENT_STATUS',clientStatus())
 });
 
 
 
-// Each citizen will report status on jobs here
-// which will then be sent to the ui via socketio
+// Fired from the master when boss.onCompleted is fired.
+// This is received by citizen nodes and sent to their UI.
 dem.on('completed', (data) => {
-  delete order_dict[data.completed_id]
-  delete client_dict[data.hostname].jobs[data.completed_id]
-  io.emit('ORDER_QUEUE', order_dict);
-  io.emit('INGEST_QUEUE', client_dict);
+  dem.order_dict = data.orderDict
+  dem.client_dict = data.clientDict
+  io.emit('ORDER_QUEUE', dem.order_dict);
+  io.emit('INGEST_QUEUE', dem.client_dict); 
 })
 
+/* Loop over list of jobId's and look them up in the
+** order dictionary to set the hostname of client citizen
+** working on the job. 
+**/
 dem.on('received', (data) => {
-  console.log('received jobs... sending out status')
- 
-  /* Loop over list of jobId's and look them up in the
-  ** order dictionary to set the hostname of client citizen
-  ** working on the job. Once this is done it checks to see
-  ** if the jobs proprerty is set for that client. If its the 
-  ** clients first job then it creates the job property and pushes
-  ** the jobs into the client dictionary
-  **/
+  console.log(`${data.hostname} recieved ${data.received.length} jobs sending out status to my ui.`)
   data.received.map(jobId => {
-    //if(client_dict[data.hostname].hasOwnProperty('jobs')) {
-      // client_dict[data.hostname].jobs.push(order_dict[jobId])
-      client_dict[data.hostname].jobs[jobId] = order_dict[jobId]
-    //}
+    dem.client_dict[data.hostname].jobs[jobId] = dem.order_dict[jobId]
   })
-  io.emit('INGEST_QUEUE', client_dict);
+  io.emit('INGEST_QUEUE', dem.client_dict);
 });
 
 dem.on('ordered', (data) => {
-  order_dict = data
+  dem.order_dict = data
 })
-
-
-  
+ 
 function ready() {
 
   console.log("Grabbing jobs that are already in the queue and bringing them in local for tracking/reporting.")
@@ -176,9 +171,9 @@ function ready() {
         directory: res.stats.directory,
         client: '',
       } 
-      order_dict[res.id] = job_data
-      dem.publish('ordered', order_dict)
-      io.emit('ORDER_QUEUE', order_dict);
+      dem.order_dict[res.id] = job_data
+      dem.publish('ordered', dem.order_dict)
+      io.emit('ORDER_QUEUE', dem.order_dict);
 
     })    
   })
@@ -196,7 +191,6 @@ function ready() {
   console.log("WATCH DIRS: ",watch_dirs)
   var watcher = chokidar.watch(watch_dirs, config.watcher.options)
   watcher.on('add', (file, stats) => {
-    console.log("FILE FROM WATCH: ",file)
     let base_path = path.dirname(file)
     const file_name = path.basename(file)
     stats.file_type = path.extname(file)
@@ -223,9 +217,9 @@ function ready() {
           client: ''
         } 
         // Update UI with new order_dict download list 
-        order_dict[jobId] = job_data
-        dem.publish('ordered', order_dict)
-        io.emit('ORDER_QUEUE', order_dict);
+        dem.order_dict[jobId] = job_data
+        dem.publish('ordered', dem.order_dict)
+        io.emit('ORDER_QUEUE', dem.order_dict);
       })
       .catch(onError);
    });
@@ -233,19 +227,35 @@ function ready() {
   // Subscribe to ingest queue, add myself to client_dict for job tracking
   // and do work if leader is also a citizen
   if(config.node.citizen){
-    // client_dict[dem.options.id] = { jobs: [], active: true}
-    client_dict[dem.options.id] = { jobs: {}, active: true}
-    boss.subscribe('ingest', {batchSize: 5 }, job => jm.ingest(job))
-      .then(() => console.log('leader subscribed to ingest queue'))
+    dem.client_dict[dem.options.id] = { jobs: {}, active: true}
+    boss.subscribe('ingest', {batchSize: 5 }, job => { jm.ingest(job,dem,io)})
+      .then(() => {
+        console.log('leader subscribed to ingest queue')
+        console.log('client status in joined: ', clientStatus())
+        io.emit('CLIENT_STATUS', clientStatus())
+      })
       .catch(onError);
-  }
-  
+  } 
+
+  boss.onComplete('ingest', job => {
+    if(job.data.failed) {
+      return console.error(`job ${job.data.request.id} ${job.data.state}`);
+    }
+
+    console.log(`Master marking job: ${job.data.request.id} completed by ${job.data.response.value}`)
+    delete dem.order_dict[job.data.request.id]
+    delete dem.client_dict[job.data.response.value].jobs[job.data.request.id]
+    dem.publish('completed', { orderDict: dem.order_dict, clientDict: dem.client_dict })
+    io.emit('ORDER_QUEUE', dem.order_dict);
+    io.emit('INGEST_QUEUE', dem.client_dict); 
+  })
+  .then(() => console.log(`subscribed to queue ingest completions`));
 }
 
 function clientStatus() {
   var clients = { active: [], removed: [] }
-  Object.keys(client_dict).map(client => {
-    if(client_dict[client].active == true){
+  Object.keys(dem.client_dict).map(client => {
+    if(dem.client_dict[client].active == true){
       clients.active.push(client)
     } 
     else {
@@ -256,14 +266,9 @@ function clientStatus() {
   return clients
 }
 
-
  
 function onError(error) {
   console.error(error);
 }
 
-function onMonitor(data){
-  //console.log("IN ON MONITOR with DATA: ",data)
-  //console.log("BOSS: ",boss)
-}
 

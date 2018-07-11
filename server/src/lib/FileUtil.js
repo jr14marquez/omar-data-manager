@@ -1,6 +1,6 @@
 const fs = require('fs-extra')
 
-var mvFile = (file,archive_dir) => {
+var ingestFile = (file,archive_dir) => {
 	let file_name = file.split("/").pop()
 	var dest_dir = getFilePath(file_name, archive_dir)
 	return fs.ensureDir(dest_dir)
@@ -9,6 +9,22 @@ var mvFile = (file,archive_dir) => {
 			return fs.move(file,dest)
 				.then(() => {
 				  return `successfully moved file to archive ${dest}`
+				})
+				.catch(err => {
+				  console.error(err)
+				})
+		})
+		.catch(err => {
+		  console.error(err)
+		})
+}
+
+var mvFile = (file,directory) => {
+	return fs.ensureDir(directory)
+		.then(() => {
+			return fs.move(file,directory)
+				.then(() => {
+				  return `Moved file to directory ${directory}`
 				})
 				.catch(err => {
 				  console.error(err)
@@ -61,7 +77,7 @@ var getDay = (file_name) => { return file_name.substring(0,2) }
 var getImageId = (file_name) => { return file_name.substring(0,18) }
 
 module.exports = {
-	mvFile: mvFile,
+	ingestFile: ingestFile,
     getFilePath: getFilePath,
     getMission: getMission,
     getYear: getYear,

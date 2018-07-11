@@ -17,6 +17,17 @@ const config = convict({
     //default: '/Users/JR/archive',
     env: 'ARCHIVE_DIR'
   },
+  failed_dir: {
+    doc: 'The path to the failed directory where failed jobs should be written to.',
+    format: String,
+    default: '/home/rmarquez/failed',
+    env: 'FAILED_DIR'
+  },
+  stager_url: {
+    doc: 'The url of the omar-stager to ingest the image file.',
+    format: 'url',
+    default: 'http://localhost:8080/omar-services',
+  },
   node: {
     /* By Default the first node started will be the leader node and each
      * node after will be a citizen. A vote will take place and a new 
@@ -33,7 +44,7 @@ const config = convict({
     },
     citizen: {
       format: 'Boolean',
-      default: false,
+      default: true,
       env: 'CITIZEN',
     },
     peers: {
@@ -48,6 +59,22 @@ const config = convict({
       default: 8080,
       arg: "ui",
       env: "UI"
+    },
+    classificationBanner: {
+      backgroundColor: {
+        doc: 'The banner color',
+        format: String,
+        default: '#FF0000',
+        arg: 'background_color',
+        env: "BACKGROUND_COLOR",
+      },
+      classificationType: {
+        doc: 'The classification level',
+        format: String,
+        default: 'UNCLASSIFIE',
+        arg: 'classification_type',
+        env: "CLASSIFICATION_TYPE",
+      }
     }
   },
   watcher: {
