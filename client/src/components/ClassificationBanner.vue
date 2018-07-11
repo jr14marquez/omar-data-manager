@@ -1,5 +1,5 @@
 <template>
-  <div class="col-12" style="background-color:#f4ed7c;height:30%;">
+  <div class="col-12" v-bind:style="{ 'background-color': backgroundColor, height: height }">
     <div class="text-center">{{ classification }}</div>
   </div>
 </template>
@@ -8,8 +8,12 @@
 export default {
   data () {
     return {
-      classification: 'UNCLASSIFIED'
+      classification: process.env.CLASSIFICATION_TYPE,
+      backgroundColor: process.env.BACKGROUND_COLOR,
+      height: '30%'
     }
+  },
+  mounted () {
   }
 }
 </script>

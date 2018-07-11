@@ -66,8 +66,5 @@ export default {
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
-.table-responsive {
-  /*height:100%;*/
-}
 
 </style>

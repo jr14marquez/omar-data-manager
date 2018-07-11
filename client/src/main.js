@@ -10,7 +10,8 @@ import 'bootstrap-vue/dist/bootstrap-vue.css'
 import socketio from 'socket.io-client'
 import VueSocketIO from 'vue-socket.io'
 
-export const SocketInstance = socketio('http://localhost:8090')
+const socketUrl = `http://localhost:${process.env.UI}`
+export const SocketInstance = socketio(socketUrl)
 
 Vue.use(VueSocketIO, SocketInstance, store)
 

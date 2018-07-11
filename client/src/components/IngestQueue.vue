@@ -3,7 +3,6 @@
     <b-col class="h-100" cols="12" >
       <b-card no-body class="h-100">
         <b-tabs pills card vertical class="h-100" nav-wrapper-class="col-2" v-if="clientStatus.active.length > 0">
-          <!--<b-tab class="h-100" v-for="client,index in Object.keys(IngestQueues)">-->
           <b-tab class="h-100" v-for="client,index in clientStatus.active">
             <template slot="title">
               {{client}}: <b-badge variant="dark">{{Object.keys(IngestQueues[client].jobs).length}}</b-badge>
@@ -50,10 +49,6 @@ export default {
   mounted () {
   },
   watch: {
-    // IngestQueues (clients) {
-    //   console.log('in watch for ingest queue')
-    //   console.log('watch for iq: ', clients)
-    // }
   },
   computed: {
     clientStatus () {

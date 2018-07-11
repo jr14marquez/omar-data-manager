@@ -15,7 +15,13 @@ export default {
       chart_data: {
         datasets: [{
           data: [],
-          backgroundColor: ['#FF0000', '#FFFF00', '#FF8C00', '#84FF63', '#4422dd', '#000000']
+          backgroundColor: [
+            '#2A2B2A', '#20FC8F', '#ADC698', '#E9D758', '#297373',
+            '#FF8552', '#E6E636', '#3E000C', '#FFCBDD', '#D10000',
+            '#5299D3', '#0B5563', '#BBBE64', '#7D8491', '#E8985E',
+            '#DEC0F1', '#7161EF', '#3B252C', '#353831', '#HFF1053',
+            '#66C7F4', '#E3E4DB', '#011936', '#EFD780', '#3E1929'
+          ]
         }],
         labels: []
       }
