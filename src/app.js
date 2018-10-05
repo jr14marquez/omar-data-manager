@@ -108,7 +108,7 @@ function ready() {
         
   if(config.node.citizen){
     if(queues['ingest'] == false) {
-      boss.subscribe('ingest', {batchSize: 10, newJobCheckIntervalSeconds 20 }, job => { jm.ingest(job,dem)})
+      boss.subscribe('ingest', {batchSize: 10, newJobCheckIntervalSeconds: 20 }, job => { jm.ingest(job,dem)})
         .then(() => {
           log.info('leader subscribed to ingest queue')
         })
@@ -118,10 +118,11 @@ function ready() {
 
   boss.onComplete('ingest', job => {
     if(job.data.failed) {
+      console.log("COMPLETE: ",job.data.request.data)
       return log.error(`job ${job.data.request.id} ${job.data.state}`)
     }
   })
-  .then(() => log.info('subscribed to ingest queue completions')
+  .then(() => log.info('subscribed to ingest queue completions'))
     
 }//end ready
 

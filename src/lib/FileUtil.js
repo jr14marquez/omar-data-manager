@@ -33,11 +33,11 @@ var mvFile = (file,directory) => {
 			let dest = `${directory}/${file_name}`
 			return fs.move(file,dest)
 				.then(() => {
-				  return { code: 'fail', desintation: dest }
+				  return { code: 'fail', destination: dest }
 				})
-				.catch(err => { log.error(err) })
+				.catch(err => { log.error(`Err in mvFile.fs move: ${err}`) })
 		})
-		.catch(err => { log.error(err) })
+		.catch(err => { log.error(`Err in mvFile.fs ensure: ${err}`) })
 }
 
 var getFilePath = (file_name, archive_dir) => {

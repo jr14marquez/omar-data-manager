@@ -1,7 +1,7 @@
 const chalk = require('chalk')
 const log = console.log
 const red = chalk.inverse.red
-const blud = chalk.bold.blue
+const blue = chalk.bold.blue
 const orange = chalk.keyword('orange')
 const green = chalk.bold.green
 

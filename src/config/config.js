@@ -54,7 +54,14 @@ const config = convict({
       format: Array,
       default: ['0.0.0.0:3000','0.0.0.0:3001','0.0.0.0:3002'],
       env: 'PEERS',
-    }
+    },
+    ui: {
+      doc: 'The port the Health/Status UI should listen/bind on',
+      format: "port",
+      default: 9090,
+      arg: "ui",
+      env: "UI"
+    },
   },
   watcher: {
     // chokidar options ignoring hidden . files

@@ -16,18 +16,22 @@ exports.ingest = (jobs,dem) => {
         var regexExists = /already exists/; // Doesn't exist on filesystem but exists in db
 
         args.push(file.destination)
-        const ingestPs = execFile('omar-data-manager', args, (error, stdout, stderr) => {
-          console.log('stdout: ',stdout)
+        const ingestPs = execFile('omar-data-mgr', args, (error, stdout, stderr) => {
+          console.log('stdout1: ',stdout)
+          console.log('error1: ',error)
+          console.log('stderr1:',stderr)
           if(error != null){
+            console.log('in if 1')
             onError(`Error: ${error}`)
-            onError(`Error: ${error}`)
+            onError(`Error stderr: ${stderr}`)
             if(regexExists.test(stdout)) {
               log.warning(`File already exists in database. Completed job ${job.id}`)
               job.done(null, dem.options.id)
             }
             else {
+              console.log('in else')
               onError(`Error: ${error}`)
-              onError(`Error: ${error}`)
+              onError(`Error stderr: ${stderr}`)
               //move file to failed and throw error in done
               fUtil.mvFile(file.destination,config.failed_dir)
                 .then((file) => {
@@ -40,10 +44,11 @@ exports.ingest = (jobs,dem) => {
           }
 
           if(regexSuccess.test(stdout)) {
-            console.log('stdout': stdout)
+            console.log('stdout2 success: ', stdout)
             job.done(null,dem.options.id)
             log.success(`completed job ${job.id}`)
           }
+          console.log('end of all')
         })
       })
       .catch(onError)
