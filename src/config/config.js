@@ -72,6 +72,7 @@ const config = convict({
         usePolling: true,
         interval: 5000,
         binaryInterval: 5000,
+        atomic: true, 
         awaitWriteFinish: { 
           stabilityThreshold: 2000,
           pollInterval: 100
