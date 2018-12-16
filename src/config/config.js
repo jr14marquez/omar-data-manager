@@ -29,6 +29,18 @@ const config = convict({
     default: 'http://localhost:8081/omar-services',
     env: 'STAGER_URL'
   },
+  out_log: {
+    doc: 'The output logfile',
+    format: String,
+    default: '/var/log/omar/omar-data-manager.log',
+    env: 'OUT_LOG'
+  },
+  err_log: {
+    doc: 'The error logfile',
+    format: String,
+    default: '/var/log/omar/omar-data-manager-error.log',
+    env: 'ERROR_LOG'
+  },
   node: {
     /* By Default the first node started will be the leader node and each
      * node after will be a citizen. A vote will take place and a new 

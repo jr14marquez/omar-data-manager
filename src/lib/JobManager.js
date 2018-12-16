@@ -1,61 +1,74 @@
 const fs = require('fs-extra')
 const fUtil = require('./FileUtil.js')
 const config = require('../config/config.js')
-const { execFile } = require('child_process')
-const log = require('./Logger.js')
+const logger = require('./Logger.js')
+const axios = require('axios')
 
 exports.ingest = (jobs,dem) => {
-  log.info(`Starting ingest with ${jobs.length}`)
+  logger.log('info',`Starting ingest with ${jobs.length}`)
+
+  /*jobs.map((job) => {
+    console.log('in first job loop for pending')
+    logger.log('info',{ 
+      status: 'pending', 
+      jobId: job.id, 
+      fileName: job.data.stats.fileName, 
+      fileType: job.data.stats.fileType,
+      directory: job.data.stats.directory,
+      mission: job.data.stats.mission,
+      priority: job.data.stats.priority, 
+      message: `Pending ingest job ${job.id} for file: ${job.data.file} with priority ${job.data.stats.priority}`
+    })
+  })*/
+  console.log('after loop')
+
 	jobs.map((job) => {
     const args = `-u ${config.stager_url} --preproc --ot ossim_kakadu_nitf_j2k --ch add`.split(" ")
-    log.info(`Working on ingesting ${job.data.file}`)
-    fUtil.ingestFile(job.data.file,config.archive_dir)
-      .then((file) => {
+    logger.info({ 
+      status: 'active', 
+      jobId: job.id, 
+      fileName: job.data.stats.fileName, 
+      fileType: job.data.stats.fileType,
+      directory: job.data.stats.directory,
+      mission: job.data.stats.mission,
+      priority: job.data.stats.priority, 
+      message: `Working on ingest job ${job.id} for file: ${job.data.file} with priority ${job.data.stats.priority}`
+    })
+
+      var destDir = fUtil.getFilePath(job.data.stats.fileName, config.archive_dir)
+      var destination = `${destDir}/${job.data.stats.fileName}`
+      // creates destination/file tree also
+    fUtil.mvToDestination(job.data.file,destDir,destination)
+      .then(() => {
+        console.log('after mvToDestination')
         // Archive directory has been built; Run omar-data-manager cmdl app to ingest imagery
-        var regexSuccess = /Added raster/;
-        var regexExists = /already exists/; // Doesn't exist on filesystem but exists in db
 
-        args.push(file.destination)
-        const ingestPs = execFile('omar-data-mgr', args, (error, stdout, stderr) => {
-          console.log('stdout1: ',stdout)
-          console.log('error1: ',error)
-          console.log('stderr1:',stderr)
-          if(error != null){
-            console.log('in if 1')
-            onError(`Error: ${error}`)
-            onError(`Error stderr: ${stderr}`)
-            if(regexExists.test(stdout)) {
-              log.warning(`File already exists in database. Completed job ${job.id}`)
-              job.done(null, dem.options.id)
-            }
-            else {
-              console.log('in else')
-              onError(`Error: ${error}`)
-              onError(`Error stderr: ${stderr}`)
-              //move file to failed and throw error in done
-              fUtil.mvFile(file.destination,config.failed_dir)
-                .then((file) => {
-                  onError(`Finished moving to failed: ${file.destination}`)
-                  var err = new Error('Failed to ingest image')
-                  job.done(err,dem.options.id)
-                })
-                .catch(onError)
-            }
-          }
-
-          if(regexSuccess.test(stdout)) {
-            console.log('stdout2 success: ', stdout)
-            job.done(null,dem.options.id)
-            log.success(`completed job ${job.id}`)
-          }
-          console.log('end of all')
+        return axios.post(`${config.stager_url}/dataManager/addRaster`, {
+          "filename": destination,
+          "overviewType": "ossim_kakadu_nitf_j2k"
         })
       })
-      .catch(onError)
+      .then((res) => {
+        console.log('res: ',res)
+        console.log(`statusCode: ${res.status}`) //200 if successful
+        console.log('res data: ',res.data)
+        if(res.status == 200){
+          // res.data = 'Added raster 30:/home/rmarquez/Downloads/11JUL29082314-P1BS-057338893010_01_P002.NTF' when successful
+          logger.info(res.data)
+          job.done(null,dem.options.id)
+        }
+      })
+      .catch((error) => {
+        // error = dest already exists. when mvToDestination destination already exists (full path to file)
+        console.log('err from post request to stager or from fUtil ingestFile: ',error)
+        job.done(error,dem.options.id)
+      })
   })
 }
 
 
 var onError = (error) => {
-  return(console.error(error));
+  logger.info(`err message in onError: ${error}`)
+  var msg = logger.log('error',error)
+  return msg
 }

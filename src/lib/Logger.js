@@ -1,29 +1,32 @@
-const chalk = require('chalk')
-const log = console.log
-const red = chalk.inverse.red
-const blue = chalk.bold.blue
-const orange = chalk.keyword('orange')
-const green = chalk.bold.green
+const winston = require('winston')
+const config = require('../config/config.js')
 
-var info = (msg) => {
-	log(blue(msg))
-}
+module.exports = winston.createLogger({
+    level: 'info',
+    format: winston.format.combine(
+      winston.format.timestamp(),
+     
+    ),
+    transports: [
+      new winston.transports.Console({
+        format: winston.format.combine(
+          winston.format.colorize(),
+          winston.format.timestamp(),
+          winston.format.printf(info => {
+            return `${info.timestamp} ${info.level}: ${info.message}`
+          }),
+        ),
+      }),
+      new winston.transports.File({ 
+        filename: config.out_log,
+        format: winston.format.json()
+      }),
+      new winston.transports.File({ 
+        filename: config.err_log,
+        level: 'error',
+        format: winston.format.json()
+      })
+    ]
+})
 
-var warning = (msg) => {
-	log(orange(msg))
-}
 
-var error = (msg) => {
-	log(red(msg))
-}
-
-var success = (msg) => {
-	log(green(msg))
-}
-
-module.exports = {
-	info: info,
-	warning: warning,
-	error: error,
-	success: success
-}

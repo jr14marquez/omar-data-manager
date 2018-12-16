@@ -1,29 +1,11 @@
 const fs = require('fs-extra')
-const log = require('./Logger.js')
+const logger = require('./Logger.js')
 
-var ingestFile = (file,archive_dir) => {
-  let file_name = file.split("/").pop()
-  var dest_dir = getFilePath(file_name, archive_dir)
-	return fs.ensureDir(dest_dir)
+var mvToDestination = (file,destDir,destination) => {
+	return fs.ensureDir(destDir)
 	  .then(() => {
-			let dest = `${dest_dir}/${file_name}`
-			return fs.move(file,dest)
-				.then(() => {
-				  return { code: 'success', destination: dest }
-				})
-				.catch(err => {
-				  //Duplicate detected so we move the file from the original sport/landing
-				  var regexExists = /exists/;
-				  if(regexExists.test(err)) {
-				  	fs.unlink(file)
-				  		.then(() => {
-				  			return 'Error, image already exists so im removing duplicate'
-				  		})
-				  		.catch(err => { return err })
-				  }
-				})
+			return fs.move(file,destination)
 		})
-		.catch(err => { log.error(err) })
 }
 
 var mvFile = (file,directory) => {
@@ -35,9 +17,9 @@ var mvFile = (file,directory) => {
 				.then(() => {
 				  return { code: 'fail', destination: dest }
 				})
-				.catch(err => { log.error(`Err in mvFile.fs move: ${err}`) })
+				.catch(err => { logger.log('error',`Err in mvFile.fs move: ${err}`) })
 		})
-		.catch(err => { log.error(`Err in mvFile.fs ensure: ${err}`) })
+		.catch(err => { logger.log('error',`Err in mvFile.fs ensure: ${err}`) })
 }
 
 var getFilePath = (file_name, archive_dir) => {
@@ -82,12 +64,12 @@ var getDay = (file_name) => { return file_name.substring(0,2) }
 var getImageId = (file_name) => { return file_name.substring(0,18) }
 
 module.exports = {
-	ingestFile: ingestFile,
+	mvToDestination: mvToDestination,
 	mvFile: mvFile,
-   getFilePath: getFilePath,
-   getMission: getMission,
-   getYear: getYear,
-   getMonth: getMonth,
-   getDay: getDay,
-   getImageId: getImageId
+  getFilePath: getFilePath,
+  getMission: getMission,
+  getYear: getYear,
+  getMonth: getMonth,
+  getDay: getDay,
+  getImageId: getImageId
 }

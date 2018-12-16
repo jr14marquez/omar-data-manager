@@ -7,33 +7,34 @@ const config = require('./config/config.js')
 const PgBoss = require('pg-boss');
 const jm = require('./lib/JobManager.js')
 const fUtil = require('./lib/FileUtil.js')
-const log = require('./lib/Logger.js')
+const logger = require('./lib/Logger')
 const options = Object.assign(config.postgres,config.jobQueue)
 var queues = { 'ingest': false }
+
+//var apm = require('elastic-apm-node').start()
 
 let boss;
 try {
   boss = new PgBoss(options)
 }
 catch(error){
-  console.error(error)
+  logger.log('error',error)
 }
 
 boss.on('error', onError)
 boss.on('expired', onExpired)
 
-log.info(`NODE STARTED ON: ${os.hostname}:3000 with peers ${config.node.peers}`)
+logger.log('info',`NODE STARTED ON: ${os.hostname}:3000 with configured peers ${config.node.peers}`)
 // Basic usage of democracy to manage leader and citizen nodes.
 var dem = new Democracy({
   timeout: 30000,
   source: `${os.hostname}:3000`,
   peers: config.node.peers,
-  id: `${os.hostname}:3000`,
-  channels: ['completed','received','ordered','joined'],
+  id: `${os.hostname}:3000`
 })
 
 dem.on('elected', (data) => {
-  log.info('You have been elected leader!')
+  logger.log('info',`${os.hostname}:3000 has been elected leader!`)
   boss.start()
     .then(ready)
     .catch(onError);
@@ -44,17 +45,17 @@ dem.on('elected', (data) => {
 ** before firing off the join event to all the others.
 */
 dem.on('added', (data) => {
-  log.info(`Added peer to rotation: ${data.id}`)
+  logger.log('info',`Added peer to rotation: ${data.id}`)
   if(data.state == 'leader') {
     if(queues['ingest'] == false){
       queues['ingest'] = true
-      log.info('I have just joined the rotation so i subscribe and start working.')
+      logger.log('info','I have just joined the rotation so i subscribe and start working.')
       boss.connect()
         .then(boss => {
-          log.info('connected so now i need attempting to subscribe.')
+          logger.log('info','connected so now i need attempting to subscribe.')
           boss.subscribe('ingest', { batchSize: 10, newJobCheckIntervalSeconds: 20 }, job => { jm.ingest(job,dem) })
             .then(() => {
-              log.info('subscribed to ingest queue')
+              logger.log('info','subscribed to ingest queue')
             })
             .catch(onError)
         })
@@ -64,12 +65,12 @@ dem.on('added', (data) => {
 })
 
 dem.on('removed', (data) => {
-  log.warning(`Removed peer from rotation: ${data.id}`)
+  logger.log('warn',`Removed peer from rotation: ${data.id}`)
 })
  
 function ready() {
 
-  log.info('INGEST o2-queue ready so we start the watcher...')
+  logger.log('info',`INGEST o2-queue ready. ${os.hostname}:3000 starting the watcher...`)
   let watch_dirs = []
   let directories = Object.keys(config.watcher.directories)
   directories.map(dir => {
@@ -82,25 +83,35 @@ function ready() {
   var watcher = chokidar.watch(watch_dirs, config.watcher.options)
   watcher.on('add', (file, stats) => {
     const base_path = path.dirname(file)
-    const file_name = path.basename(file)
-    stats.file_type = path.extname(file)
-    stats.mission = fUtil.getMission(file_name)
+    stats.fileName = path.basename(file)
+    stats.fileType = path.extname(file)
+    stats.mission = fUtil.getMission(stats.fileName)
     stats.directory = base_path
+    stats.priority = 1
 
-    var priority = '1'
     Object.keys(config.watcher.directories).map(dir => {
       if(config.watcher.directories[dir].path === base_path) {
-        priority = config.watcher.directories[dir].priority
+        stats.priority = config.watcher.directories[dir].priority
       }
     })
     
-    boss.publishOnce('ingest', {file: file, stats: stats},{priority: priority, expireIn: '720 minutes'},file)
+    boss.publishOnce('ingest', {file: file, stats: stats},{priority: stats.priority, expireIn: '720 minutes'},file)
       .then(jobId => {
         if(jobId != null) {
-          log.info(`created ingestjob ${jobId} for file: ${file} with priority ${priority}`)
+          logger.info({ 
+            status: 'created', 
+            jobId: jobId, 
+            fileName: stats.fileName, 
+            fileType: stats.fileType,
+            directory: stats.directory,
+            mission: stats.mission,
+            priority: stats.priority, 
+            message: `Created ingest job ${jobId} for file: ${file} with priority ${stats.priority}`
+          })
         }
         else {
-          log.warning(`Image ${file} already exists`)
+          //TODO: Probably need to move this file or retry once?
+          logger.log('warn',`Image ${file} already has been ingested. Clear job queue/image from job queue or rename file.`)
         }
       })
       .catch(onError)
@@ -110,28 +121,51 @@ function ready() {
     if(queues['ingest'] == false) {
       boss.subscribe('ingest', {batchSize: 10, newJobCheckIntervalSeconds: 20 }, job => { jm.ingest(job,dem)})
         .then(() => {
-          log.info('leader subscribed to ingest queue')
+          logger.log('info',`${os.hostname}:3000 leader subscribed to ingest queue`)
         })
         .catch(onError)
     }
   } 
 
   boss.onComplete('ingest', job => {
+    var level = job.data.state != 'failed' ? 'info' : 'error'
+    var completedMsg = `Completed ingest job ${job.data.request.id} for file: ${job.data.request.data.file} with priority ${job.data.request.data.stats.priority}`
+    var msg = level == 'info' ? completedMsg : `File: ${job.data.request.data.file} failed with ${job.data.response.message}`
+    
+    logger.log({ 
+      level: level,
+      status: job.data.state, 
+      jobId: job.data.request.id, 
+      fileName: job.data.request.data.stats.fileName, 
+      fileType: job.data.request.data.stats.fileType,
+      directory: job.data.request.data.stats.directory,
+      mission: job.data.request.data.stats.mission,
+      priority: job.data.request.data.stats.priority, 
+      message: msg
+    })
     if(job.data.failed) {
-      console.log("COMPLETE: ",job.data.request.data)
-      return log.error(`job ${job.data.request.id} ${job.data.state}`)
-    }
+      var destDir = fUtil.getFilePath(job.data.request.data.stats.fileName, config.archive_dir)
+      var destination = `${destDir}/${job.data.request.data.stats.fileName}`
+      var rgx = /exists/;
+   
+      // should probably include a config option to let them decide to move to failed or keep in archive 
+      // should probably include a config option to allow them to delete/keep a file if it already exists
+      var failedImg = rgx.test(job.data.response.message) ? `${job.data.request.data.stats.directory}/${job.data.request.data.stats.fileName}` : destination
+      fUtil.mvFile(failedImg,config.failed_dir)
+      .catch(onError)
+
+    } // end if failed
   })
-  .then(() => log.info('subscribed to ingest queue completions'))
+  .then(() => logger.log('info',`${os.hostname}:3000 leader subscribed to ingest queue completions to handle failed jobs`))
     
 }//end ready
 
 function onError(error) {
-  log.error(error)
+  logger.log('error',error)
 }
 
 function onExpired(expired) {
-  log.warning(`Expired: ${expired}`)
+  logger.log('warn',`Expired: ${expired}`)
 }
 
 
