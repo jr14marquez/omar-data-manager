@@ -35,11 +35,11 @@ const config = convict({
     default: '/var/log/omar/omar-data-manager.log',
     env: 'OUT_LOG'
   },
-  err_log: {
-    doc: 'The error logfile',
-    format: String,
-    default: '/var/log/omar/omar-data-manager-error.log',
-    env: 'ERROR_LOG'
+  dbg: {
+    doc: 'Also output to console for live debugging',
+    format: 'Boolean',
+    default: true,
+    env: 'DBG',
   },
   node: {
     /* By Default the first node started will be the leader node and each

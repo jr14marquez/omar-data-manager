@@ -17,9 +17,9 @@ var mvFile = (file,directory) => {
 				.then(() => {
 				  return { code: 'fail', destination: dest }
 				})
-				.catch(err => { logger.log('error',`Err in mvFile.fs move: ${err}`) })
+				.catch(err => { logger.log('error',`Err moving file: ${err}`) })
 		})
-		.catch(err => { logger.log('error',`Err in mvFile.fs ensure: ${err}`) })
+		.catch(err => { logger.log('error', err) })
 }
 
 var getFilePath = (file_name, archive_dir) => {
