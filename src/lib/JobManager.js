@@ -24,7 +24,8 @@ exports.ingest = (jobs,dem) => {
 
 	jobs.map((job) => {
     const args = `-u ${config.stager_url} --preproc --ot ossim_kakadu_nitf_j2k --ch add`.split(" ")
-    logger.info({ 
+    logger.log({ 
+      level: 'info',
       status: 'active', 
       jobId: job.id, 
       fileName: job.data.stats.fileName, 
@@ -54,7 +55,7 @@ exports.ingest = (jobs,dem) => {
         console.log('res data: ',res.data)
         if(res.status == 200){
           // res.data = 'Added raster 30:/home/rmarquez/Downloads/11JUL29082314-P1BS-057338893010_01_P002.NTF' when successful
-          logger.info(res.data)
+          logger.log('info',res.data)
           job.done(null,dem.options.id)
         }
       })
@@ -68,7 +69,6 @@ exports.ingest = (jobs,dem) => {
 
 
 var onError = (error) => {
-  logger.info(`err message in onError: ${error}`)
   var msg = logger.log('error',error)
   return msg
 }

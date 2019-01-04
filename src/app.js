@@ -98,7 +98,8 @@ function ready() {
     boss.publishOnce('ingest', {file: file, stats: stats},{priority: stats.priority, expireIn: '720 minutes'},file)
       .then(jobId => {
         if(jobId != null) {
-          logger.info({ 
+          logger.log({ 
+	    level: 'info',
             status: 'created', 
             jobId: jobId, 
             fileName: stats.fileName, 
